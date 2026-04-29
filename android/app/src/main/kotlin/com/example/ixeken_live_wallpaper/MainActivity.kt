@@ -1,6 +1,7 @@
 package com.example.ixeken_live_wallpaper
 
 import android.content.Context
+import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -18,7 +19,7 @@ class MainActivity: FlutterActivity() {
             when (call.method) {
                 "updatePlaylist" -> {
                     val playlist = call.argument<List<String>>("playlist")
-                    val type = call.argument<String>("type") ?: "general" // general, day, night
+                    val type = call.argument<String>("type") ?: "general"
                     if (playlist != null) {
                         val key = when(type) {
                             "day" -> "playlist_day"
@@ -26,6 +27,10 @@ class MainActivity: FlutterActivity() {
                             else -> "playlist"
                         }
                         editor.putString(key, playlist.joinToString("||")).apply()
+                        
+                        // Notificar cambio
+                        sendBroadcast(Intent(IxekenWallpaperService.ACTION_SETTINGS_CHANGED))
+                        
                         result.success(true)
                     } else {
                         result.error("INVALID_ARGS", "Playlist is null", null)
@@ -37,18 +42,26 @@ class MainActivity: FlutterActivity() {
                     val dayStartHour = call.argument<Int>("dayStartHour") ?: 6
                     val nightStartHour = call.argument<Int>("nightStartHour") ?: 18
                     val isDimEnabled = call.argument<Boolean>("isDimEnabled") ?: false
+                    val selectedEngine = call.argument<String>("selectedEngine") ?: "carousel"
                     
                     editor.putBoolean("changeOnVisible", changeOnVisible)
                         .putBoolean("useDayNightMode", useDayNightMode)
                         .putInt("dayStartHour", dayStartHour)
                         .putInt("nightStartHour", nightStartHour)
                         .putBoolean("isDimEnabled", isDimEnabled)
-                        .apply()
+                        .putString("selected_engine", selectedEngine)
+                        .commit() // Usamos commit para asegurar que el dato esté escrito antes del broadcast
+                    
+                    // Enviar señal de actualización inmediata al servicio
+                    val intent = Intent(IxekenWallpaperService.ACTION_SETTINGS_CHANGED)
+                    intent.setPackage(packageName) // Asegurar que solo nuestra app lo reciba
+                    sendBroadcast(intent)
+                    
                     result.success(true)
                 }
                 "openWallpaperPicker" -> {
                     try {
-                        val intent = android.content.Intent(android.app.WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
+                        val intent = Intent(android.app.WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
                         intent.putExtra(android.app.WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT, 
                             android.content.ComponentName(this, IxekenWallpaperService::class.java))
                         startActivity(intent)

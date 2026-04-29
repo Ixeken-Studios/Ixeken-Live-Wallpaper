@@ -25,6 +25,7 @@ class WallpaperManager {
     int dayStartHour = 6,
     int nightStartHour = 18,
     bool isDimEnabled = false,
+    String selectedEngine = 'carousel',
   }) async {
     try {
       final bool result = await _channel.invokeMethod('updateSettings', {
@@ -33,6 +34,7 @@ class WallpaperManager {
         'dayStartHour': dayStartHour,
         'nightStartHour': nightStartHour,
         'isDimEnabled': isDimEnabled,
+        'selectedEngine': selectedEngine,
       });
       return result;
     } on PlatformException catch (e) {
