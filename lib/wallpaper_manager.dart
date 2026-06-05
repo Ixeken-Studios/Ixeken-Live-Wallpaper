@@ -4,17 +4,18 @@ class WallpaperManager {
   static const MethodChannel _channel = MethodChannel('com.ixeken.wallpaper/media');
 
   /// Envía la lista de rutas absolutas al lado nativo.
+  /// Retorna la lista de nuevas rutas en el almacenamiento interno o null si hay un error.
   /// [type] puede ser 'general', 'day', o 'night'.
-  static Future<bool> updatePlaylist(List<String> filePaths, {String type = 'general'}) async {
+  static Future<List<String>?> updatePlaylist(List<String> filePaths, {String type = 'general'}) async {
     try {
-      final bool result = await _channel.invokeMethod('updatePlaylist', {
+      final List<dynamic>? result = await _channel.invokeMethod('updatePlaylist', {
         'playlist': filePaths,
         'type': type,
       });
-      return result;
+      return result?.cast<String>();
     } on PlatformException catch (e) {
       print("Error al actualizar la playlist ($type): '${e.message}'.");
-      return false;
+      return null;
     }
   }
 
@@ -26,6 +27,8 @@ class WallpaperManager {
     int nightStartHour = 18,
     bool isDimEnabled = false,
     String selectedEngine = 'carousel',
+    bool isRandom = false,
+    String tetrisStyle = 'neon',
   }) async {
     try {
       final bool result = await _channel.invokeMethod('updateSettings', {
@@ -35,6 +38,8 @@ class WallpaperManager {
         'nightStartHour': nightStartHour,
         'isDimEnabled': isDimEnabled,
         'selectedEngine': selectedEngine,
+        'isRandom': isRandom,
+        'tetrisStyle': tetrisStyle,
       });
       return result;
     } on PlatformException catch (e) {

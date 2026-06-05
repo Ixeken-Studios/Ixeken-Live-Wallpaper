@@ -66,6 +66,10 @@ class IxekenWallpaperService : WallpaperService() {
                 "matrix" -> MatrixWallpaperEngine(this@IxekenWallpaperService)
                 "plexus" -> PlexusWallpaperEngine(this@IxekenWallpaperService)
                 "liquid" -> LiquidGradientWallpaperEngine(this@IxekenWallpaperService)
+                "starfield" -> StarfieldWallpaperEngine(this@IxekenWallpaperService)
+                "vaporwave" -> VaporwaveWallpaperEngine(this@IxekenWallpaperService)
+                "conway" -> ConwayWallpaperEngine(this@IxekenWallpaperService)
+                "fluids" -> FluidSwarmWallpaperEngine(this@IxekenWallpaperService)
                 else -> CarouselWallpaperEngine(this@IxekenWallpaperService)
             }
             

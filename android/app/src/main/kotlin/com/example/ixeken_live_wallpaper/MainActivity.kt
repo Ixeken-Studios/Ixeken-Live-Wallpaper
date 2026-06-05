@@ -5,6 +5,7 @@ import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.ixeken.wallpaper/media"
@@ -21,17 +22,57 @@ class MainActivity: FlutterActivity() {
                     val playlist = call.argument<List<String>>("playlist")
                     val type = call.argument<String>("type") ?: "general"
                     if (playlist != null) {
+                        // Copiar archivos a almacenamiento interno permanente
+                        val storageDir = File(filesDir, "wallpapers/$type")
+                        if (!storageDir.exists()) {
+                            storageDir.mkdirs()
+                        }
+                        
+                        val copiedPaths = mutableListOf<String>()
+                        
+                        for (path in playlist) {
+                            val originalFile = File(path)
+                            if (!originalFile.exists()) {
+                                continue
+                            }
+                            
+                            val destFile = File(storageDir, originalFile.name)
+                            
+                            // Si el archivo de origen no está ya en el destino, copiarlo
+                            if (originalFile.absolutePath != destFile.absolutePath) {
+                                try {
+                                    originalFile.inputStream().use { input ->
+                                        destFile.outputStream().use { output ->
+                                            input.copyTo(output)
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    continue
+                                }
+                            }
+                            copiedPaths.add(destFile.absolutePath)
+                        }
+                        
+                        // Limpieza de archivos antiguos no referenciados
+                        val copiedSet = copiedPaths.map { File(it).name }.toSet()
+                        storageDir.listFiles()?.forEach { file ->
+                            if (!copiedSet.contains(file.name)) {
+                                file.delete()
+                            }
+                        }
+                        
                         val key = when(type) {
                             "day" -> "playlist_day"
                             "night" -> "playlist_night"
                             else -> "playlist"
                         }
-                        editor.putString(key, playlist.joinToString("||")).apply()
+                        editor.putString(key, copiedPaths.joinToString("||")).apply()
                         
                         // Notificar cambio
                         sendBroadcast(Intent(IxekenWallpaperService.ACTION_SETTINGS_CHANGED))
                         
-                        result.success(true)
+                        result.success(copiedPaths)
                     } else {
                         result.error("INVALID_ARGS", "Playlist is null", null)
                     }
@@ -43,6 +84,8 @@ class MainActivity: FlutterActivity() {
                     val nightStartHour = call.argument<Int>("nightStartHour") ?: 18
                     val isDimEnabled = call.argument<Boolean>("isDimEnabled") ?: false
                     val selectedEngine = call.argument<String>("selectedEngine") ?: "carousel"
+                    val isRandom = call.argument<Boolean>("isRandom") ?: false
+                    val tetrisStyle = call.argument<String>("tetrisStyle") ?: "neon"
                     
                     editor.putBoolean("changeOnVisible", changeOnVisible)
                         .putBoolean("useDayNightMode", useDayNightMode)
@@ -50,6 +93,8 @@ class MainActivity: FlutterActivity() {
                         .putInt("nightStartHour", nightStartHour)
                         .putBoolean("isDimEnabled", isDimEnabled)
                         .putString("selected_engine", selectedEngine)
+                        .putBoolean("isRandom", isRandom)
+                        .putString("tetris_style", tetrisStyle)
                         .commit() // Usamos commit para asegurar que el dato esté escrito antes del broadcast
                     
                     // Enviar señal de actualización inmediata al servicio

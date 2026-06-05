@@ -1,7 +1,13 @@
 package com.example.ixeken_live_wallpaper.engines
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.RectF
+import android.graphics.Shader
 import android.view.Choreographer
 import android.view.SurfaceHolder
 import kotlin.random.Random
@@ -11,6 +17,7 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
     private var currentHolder: SurfaceHolder? = null
     private var isVisible = false
     private val paint = Paint().apply { isAntiAlias = true }
+    private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
     
     private val cols = 10
     private var rows = 20
@@ -26,18 +33,7 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
     private var targetRotation = 0
     
     private var lastUpdate = 0L
-    private val dropInterval = 200L // Más fluido
-    
-    private val colors = intArrayOf(
-        Color.TRANSPARENT,
-        Color.parseColor("#00F0F0"), // I
-        Color.parseColor("#0000F0"), // J
-        Color.parseColor("#F0A000"), // L
-        Color.parseColor("#F0F000"), // O
-        Color.parseColor("#00F000"), // S
-        Color.parseColor("#A000F0"), // T
-        Color.parseColor("#F00000")  // Z
-    )
+    private val dropInterval = 200L
 
     private val shapes = arrayOf(
         arrayOf(arrayOf(intArrayOf(1,1,1,1)), arrayOf(intArrayOf(1),intArrayOf(1),intArrayOf(1),intArrayOf(1))),
@@ -84,9 +80,6 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
         thinkBestMove()
     }
 
-    /**
-     * IA AVANZADA: Simula todas las rotaciones y posiciones para encontrar la mejor jugada.
-     */
     private fun thinkBestMove() {
         var bestScore = -1000000.0
         var bestX = currentPieceX
@@ -98,13 +91,11 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
             val pieceW = shape[0].size
             
             for (x in 0..(cols - pieceW)) {
-                // Simular caída
                 var y = 0
                 while (!checkCollision(x, y + 1, r)) {
                     y++
                 }
                 
-                // Calcular puntuación de este estado futuro
                 val score = evaluatePosition(x, y, r)
                 if (score > bestScore) {
                     bestScore = score
@@ -119,7 +110,6 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
     }
 
     private fun evaluatePosition(px: Int, py: Int, pr: Int): Double {
-        // Clonar grid para simular
         val tempGrid = Array(rows) { grid[it].copyOf() }
         val shape = shapes[currentPieceType][pr]
         
@@ -131,7 +121,6 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
             }
         }
 
-        // Heurísticas
         var aggregateHeight = 0
         var completeLines = 0
         var holes = 0
@@ -164,23 +153,19 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
             bumpiness += kotlin.math.abs(heights[x] - heights[x+1])
         }
 
-        // Formula de Dellacherie (ajustada)
         return (-0.51 * aggregateHeight) + (0.76 * completeLines) + (-0.35 * holes) + (-0.18 * bumpiness)
     }
 
     private fun updateLogic() {
         val now = System.currentTimeMillis()
         if (now - lastUpdate > dropInterval) {
-            // Rotar hacia el objetivo
             if (currentRotation != targetRotation) {
                 currentRotation = targetRotation
             }
 
-            // Mover horizontalmente
             if (currentPieceX < targetX) currentPieceX++
             else if (currentPieceX > targetX) currentPieceX--
 
-            // Caer
             if (!checkCollision(currentPieceX, currentPieceY + 1, currentRotation)) {
                 currentPieceY++
             } else {
@@ -242,47 +227,119 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
     }
 
     override fun onDraw(canvas: Canvas) {
+        val style = prefs.getString("tetris_style", "neon") ?: "neon"
+        val isRetro = style == "retro"
+        
+        // Dibujar Fondo
         val bgPaint = Paint().apply {
-            shader = LinearGradient(0f, 0f, 0f, canvas.height.toFloat(), 
-                Color.parseColor("#0A0A14"), Color.parseColor("#141428"), Shader.TileMode.CLAMP)
+            if (isRetro) {
+                color = Color.parseColor("#8BAC0F") // Fondo verde clásico Gameboy
+            } else {
+                shader = LinearGradient(0f, 0f, 0f, canvas.height.toFloat(), 
+                    Color.parseColor("#080810"), Color.parseColor("#121220"), Shader.TileMode.CLAMP)
+            }
         }
         canvas.drawRect(0f, 0f, canvas.width.toFloat(), canvas.height.toFloat(), bgPaint)
 
-        paint.color = Color.WHITE
-        paint.alpha = 15
+        // Líneas de la cuadrícula
+        paint.reset()
+        paint.isAntiAlias = true
+        paint.color = if (isRetro) Color.parseColor("#306230") else Color.WHITE
+        paint.alpha = if (isRetro) 30 else 12
+        paint.strokeWidth = 1f
         for (x in 0..cols) canvas.drawLine(x * cellSize, 0f, x * cellSize, canvas.height.toFloat(), paint)
         for (y in 0..rows) canvas.drawLine(0f, y * cellSize, canvas.width.toFloat(), y * cellSize, paint)
 
+        // Bloques ya fijados
         for (y in 0 until rows) {
             for (x in 0 until cols) {
-                if (grid[y][x] != 0) drawBlock(canvas, x, y, colors[grid[y][x]])
+                if (grid[y][x] != 0) drawBlock(canvas, x, y, grid[y][x], style)
             }
         }
 
+        // Pieza actual cayendo
         val shape = shapes[currentPieceType][currentRotation % shapes[currentPieceType].size]
         for (y in shape.indices) {
             for (x in shape[y].indices) {
-                if (shape[y][x] != 0) drawBlock(canvas, currentPieceX + x, currentPieceY + y, colors[currentPieceType + 1], true)
+                if (shape[y][x] != 0) drawBlock(canvas, currentPieceX + x, currentPieceY + y, currentPieceType + 1, style, true)
             }
         }
     }
 
-    private fun drawBlock(canvas: Canvas, x: Int, y: Int, color: Int, isCurrent: Boolean = false) {
-        val left = x * cellSize + 4
-        val top = y * cellSize + 4
-        val right = (x + 1) * cellSize - 4
-        val bottom = (y + 1) * cellSize - 4
+    private fun drawBlock(canvas: Canvas, x: Int, y: Int, colorIndex: Int, style: String, isCurrent: Boolean = false) {
+        val colors = when(style) {
+            "retro" -> intArrayOf(
+                Color.TRANSPARENT,
+                Color.parseColor("#9BBC0F"), Color.parseColor("#8BAC0F"),
+                Color.parseColor("#306230"), Color.parseColor("#0F380F"),
+                Color.parseColor("#8BAC0F"), Color.parseColor("#306230"),
+                Color.parseColor("#9BBC0F")
+            )
+            "pastel" -> intArrayOf(
+                Color.TRANSPARENT,
+                Color.parseColor("#FFB7B2"), Color.parseColor("#FFDAC1"),
+                Color.parseColor("#E2F0CB"), Color.parseColor("#B5EAD7"),
+                Color.parseColor("#C7CEEA"), Color.parseColor("#FFC6FF"),
+                Color.parseColor("#FF9AA2")
+            )
+            else -> intArrayOf( // neon and outline
+                Color.TRANSPARENT,
+                Color.parseColor("#00F0F0"), Color.parseColor("#3B82F6"),
+                Color.parseColor("#F59E0B"), Color.parseColor("#FBBF24"),
+                Color.parseColor("#10B981"), Color.parseColor("#8B5CF6"),
+                Color.parseColor("#EF4444")
+            )
+        }
+        
+        val color = colors[colorIndex.coerceIn(0, colors.size - 1)]
+        val left = x * cellSize + 2.5f
+        val top = y * cellSize + 2.5f
+        val right = (x + 1) * cellSize - 2.5f
+        val bottom = (y + 1) * cellSize - 2.5f
         
         paint.reset()
         paint.isAntiAlias = true
-        paint.color = color
-        if (isCurrent) paint.setShadowLayer(15f, 0f, 0f, color)
-        canvas.drawRoundRect(RectF(left, top, right, bottom), 12f, 12f, paint)
-        paint.clearShadowLayer()
-
-        paint.color = Color.WHITE
-        paint.alpha = 60
-        canvas.drawRoundRect(RectF(left + 2, top + 2, right - 2, top + 10), 4f, 4f, paint)
+        
+        when(style) {
+            "retro" -> {
+                // Gameboy clásico: bloques planos con bordes oscuros
+                paint.color = color
+                paint.style = Paint.Style.FILL
+                canvas.drawRect(left, top, right, bottom, paint)
+                
+                paint.color = Color.parseColor("#0F380F")
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = 2.5f
+                canvas.drawRect(left, top, right, bottom, paint)
+            }
+            "pastel" -> {
+                // Pastel Minimal: bloques suaves muy redondeados
+                paint.color = color
+                paint.style = Paint.Style.FILL
+                canvas.drawRoundRect(RectF(left, top, right, bottom), 8f, 8f, paint)
+            }
+            "outline" -> {
+                // Cyberpunk Outline: solo bordes de neón resplandecientes
+                paint.color = color
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = 3.5f
+                if (isCurrent) paint.setShadowLayer(10f, 0f, 0f, color)
+                canvas.drawRoundRect(RectF(left + 2, top + 2, right - 2, bottom - 2), 6f, 6f, paint)
+                paint.clearShadowLayer()
+            }
+            else -> {
+                // Neon Glow: bloques con brillo de neón y relieve superior blanco
+                paint.color = color
+                paint.style = Paint.Style.FILL
+                if (isCurrent) paint.setShadowLayer(14f, 0f, 0f, color)
+                canvas.drawRoundRect(RectF(left, top, right, bottom), 10f, 10f, paint)
+                paint.clearShadowLayer()
+                
+                paint.color = Color.WHITE
+                paint.alpha = 50
+                canvas.drawRoundRect(RectF(left + 2, top + 2, right - 2, top + 8), 3f, 3f, paint)
+            }
+        }
     }
 
     private fun drawFrame() {

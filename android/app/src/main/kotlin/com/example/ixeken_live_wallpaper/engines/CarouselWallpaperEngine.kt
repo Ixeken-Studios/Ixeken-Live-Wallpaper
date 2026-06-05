@@ -26,11 +26,13 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
     private var currentBitmap: Bitmap? = null
     private var previousBitmap: Bitmap? = null
     private var nextPreloadedBitmap: Bitmap? = null
+    private var preloadedPath: String? = null
     
     private var fadeAlpha = 255
     private var isAnimating = false
     private var playlist: List<String> = emptyList()
     private var currentIndex = -1
+    private var nextIndex = -1
     private var currentHolder: SurfaceHolder? = null
 
     private val frameCallback = object : Choreographer.FrameCallback {
@@ -54,7 +56,6 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
     override fun onCreate(holder: SurfaceHolder) {
         currentHolder = holder
         updateCurrentPlaylist()
-        preloadNext()
         drawCurrentFrame()
     }
 
@@ -66,7 +67,32 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
             "playlist"
         }
         val savedList = prefs.getString(key, "")
-        playlist = if (!savedList.isNullOrEmpty()) savedList.split("||") else emptyList()
+        val newPlaylist = if (!savedList.isNullOrEmpty()) savedList.split("||") else emptyList()
+        
+        if (newPlaylist != playlist) {
+            playlist = newPlaylist
+            currentIndex = -1
+            nextIndex = getNextIndex()
+            clearBitmaps()
+            preloadNext(nextIndex)
+        }
+    }
+
+    private fun getNextIndex(): Int {
+        if (playlist.isEmpty()) return -1
+        if (playlist.size == 1) return 0
+        val isRandom = prefs.getBoolean("isRandom", false)
+        return if (isRandom) {
+            var next = kotlin.random.Random.nextInt(playlist.size)
+            var attempts = 0
+            while (next == currentIndex && attempts < 10) {
+                next = kotlin.random.Random.nextInt(playlist.size)
+                attempts++
+            }
+            next
+        } else {
+            (currentIndex + 1) % playlist.size
+        }
     }
 
     private fun isDayTime(): Boolean {
@@ -89,7 +115,13 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
 
     private fun applyRotation() {
         if (playlist.isEmpty()) return
-        currentIndex = (currentIndex + 1) % playlist.size
+        
+        if (nextIndex < 0 || nextIndex >= playlist.size) {
+            nextIndex = getNextIndex()
+        }
+        if (nextIndex == -1) return
+        
+        currentIndex = nextIndex
         val nextPath = playlist[currentIndex]
         isVideo = nextPath.endsWith(".mp4") || nextPath.endsWith(".mkv")
 
@@ -97,12 +129,17 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
             currentMediaPath = nextPath
             clearBitmaps()
             setupMediaPlayer()
+            nextIndex = getNextIndex()
         } else {
             releaseMediaPlayer()
             previousBitmap = currentBitmap
-            if (nextPreloadedBitmap != null && currentMediaPath == nextPath) {
+            
+            val usePreloaded = nextPreloadedBitmap != null && preloadedPath == nextPath
+            if (usePreloaded) {
                 currentBitmap = nextPreloadedBitmap
                 nextPreloadedBitmap = null
+                preloadedPath = null
+                currentMediaPath = nextPath
                 startFadeAnimation()
             } else {
                 currentMediaPath = nextPath
@@ -111,7 +148,9 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
                     mainHandler.post { currentBitmap = bitmap; startFadeAnimation() }
                 }
             }
-            preloadNext()
+            
+            nextIndex = getNextIndex()
+            preloadNext(nextIndex)
         }
     }
 
@@ -122,10 +161,10 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
         Choreographer.getInstance().postFrameCallback(frameCallback)
     }
 
-    private fun preloadNext() {
+    private fun preloadNext(index: Int) {
         if (playlist.isEmpty()) return
-        val peekIndex = (currentIndex + 1) % playlist.size
-        val peekPath = playlist[peekIndex]
+        if (index < 0 || index >= playlist.size) return
+        val peekPath = playlist[index]
         if (!peekPath.endsWith(".mp4") && !peekPath.endsWith(".mkv")) {
             thread {
                 val bitmap = loadAndScaleBitmap(peekPath)
@@ -133,6 +172,7 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
                     if (nextPreloadedBitmap != bitmap) {
                         nextPreloadedBitmap?.recycle()
                         nextPreloadedBitmap = bitmap 
+                        preloadedPath = peekPath
                     }
                 }
             }
@@ -223,6 +263,7 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
         previousBitmap?.recycle(); previousBitmap = null
         currentBitmap?.recycle(); currentBitmap = null
         nextPreloadedBitmap?.recycle(); nextPreloadedBitmap = null
+        preloadedPath = null
     }
 
     private fun calculateInSampleSize(options: BitmapFactory.Options, rw: Int, rh: Int): Int {
