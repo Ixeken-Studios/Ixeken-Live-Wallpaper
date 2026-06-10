@@ -148,18 +148,6 @@ class _HomePageState extends State<HomePage> {
     };
   }
 
-  final Map<String, IconData> _engineIcons = {
-    'carousel': Icons.photo_library_outlined,
-    'particles': Icons.blur_on,
-    'tetris': Icons.grid_view_rounded,
-    'matrix': Icons.code,
-    'plexus': Icons.hub_outlined,
-    'liquid': Icons.water_drop_outlined,
-    'starfield': Icons.auto_awesome_motion_outlined,
-    'vaporwave': Icons.wb_sunny_outlined,
-    'conway': Icons.coronavirus_outlined,
-    'fluids': Icons.waves_outlined,
-  };
 
   @override
   void initState() {
@@ -321,15 +309,28 @@ class _HomePageState extends State<HomePage> {
         ),
         centerTitle: true,
       ),
-      body: IndexedStack(
-        index: _currentTab,
+      // Stack-based floating nav bar: correct pattern for floating bottom bars.
+      // Using bottomNavigationBar with SafeArea>Align>Container causes the body
+      // to collapse because Scaffold uses the slot's intrinsic height (which
+      // Align reports as 0) to compute available body space.
+      body: Stack(
         children: [
-          _buildCustomizerTab(),
-          _buildGalleryTab(),
-          _buildSettingsTab(),
+          IndexedStack(
+            index: _currentTab,
+            children: [
+              _buildCustomizerTab(),
+              _buildGalleryTab(),
+              _buildSettingsTab(),
+            ],
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _buildFloatingNavigationBar(),
+          ),
         ],
       ),
-      bottomNavigationBar: _buildFloatingNavigationBar(),
     );
   }
 
@@ -345,15 +346,15 @@ class _HomePageState extends State<HomePage> {
           margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24, top: 8),
           height: 72,
           decoration: BoxDecoration(
-            color: isDark ? Colors.black.withOpacity(0.85) : Theme.of(context).cardColor.withOpacity(0.95),
+            color: isDark ? Colors.black.withValues(alpha: 0.85) : Theme.of(context).cardColor.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(36),
             border: Border.all(
-              color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.08),
+              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.08),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.5 : 0.1),
+                color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.1),
                 blurRadius: 16,
                 spreadRadius: 2,
                 offset: const Offset(0, 8),
@@ -422,7 +423,7 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                       blurRadius: 16,
                       spreadRadius: 2,
                     )
@@ -585,7 +586,7 @@ class _HomePageState extends State<HomePage> {
           title: Text(l.optParallax),
           subtitle: Text(l.optParallaxSub),
           value: _isParallaxEnabled,
-          activeColor: Theme.of(context).colorScheme.primary,
+          activeThumbColor: Theme.of(context).colorScheme.primary,
           onChanged: (val) {
             setState(() => _isParallaxEnabled = val);
             _savePersistedData();
@@ -596,7 +597,7 @@ class _HomePageState extends State<HomePage> {
           title: Text(l.optRandom),
           subtitle: Text(l.optRandomSub),
           value: _isRandom,
-          activeColor: Theme.of(context).colorScheme.primary,
+          activeThumbColor: Theme.of(context).colorScheme.primary,
           onChanged: (val) {
             setState(() => _isRandom = val);
             _savePersistedData();
@@ -607,7 +608,7 @@ class _HomePageState extends State<HomePage> {
           title: Text(l.optSyncTheme),
           subtitle: Text(l.optSyncThemeSub),
           value: _syncWithSystemTheme,
-          activeColor: Theme.of(context).colorScheme.primary,
+          activeThumbColor: Theme.of(context).colorScheme.primary,
           onChanged: (val) {
             setState(() {
               _syncWithSystemTheme = val;
@@ -622,7 +623,7 @@ class _HomePageState extends State<HomePage> {
             title: Text(l.optDayNight),
             subtitle: Text(l.optDayNightSub),
             value: _useDayNightMode,
-            activeColor: Theme.of(context).colorScheme.primary,
+            activeThumbColor: Theme.of(context).colorScheme.primary,
             onChanged: (val) {
               setState(() => _useDayNightMode = val);
               _savePersistedData();
@@ -875,7 +876,7 @@ class _HomePageState extends State<HomePage> {
             title: Text(l.optParallax),
             subtitle: Text(l.optParallaxSub),
             value: _isParallaxEnabled,
-            activeColor: Theme.of(context).colorScheme.primary,
+            activeThumbColor: Theme.of(context).colorScheme.primary,
             onChanged: (val) {
               setState(() => _isParallaxEnabled = val);
               _savePersistedData();
@@ -892,7 +893,7 @@ class _HomePageState extends State<HomePage> {
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
-      selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+      selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
       labelStyle: TextStyle(
         color: isSelected 
             ? Theme.of(context).colorScheme.primary 
@@ -918,10 +919,10 @@ class _HomePageState extends State<HomePage> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black87;
-    final hintColor = isDark ? Colors.white.withOpacity(0.5) : Colors.black54;
-    final iconColor = isDark ? Colors.white.withOpacity(0.5) : Colors.black54;
+    final hintColor = isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black54;
+    final iconColor = isDark ? Colors.white.withValues(alpha: 0.5) : Colors.black54;
     final clearIconColor = isDark ? Colors.white60 : Colors.black54;
-    final fillColor = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+    final fillColor = isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05);
 
     return Column(
       children: [
@@ -1005,15 +1006,15 @@ class _HomePageState extends State<HomePage> {
     final description = engineDescs[engineId] ?? '';
     final isActive = _selectedEngine == engineId;
     return Card(
-      color: Colors.white.withOpacity(0.04),
+      color: Colors.white.withValues(alpha: 0.04),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16), 
         side: BorderSide(
           color: isActive 
               ? Theme.of(context).colorScheme.primary 
               : (Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.white.withOpacity(0.05) 
-                  : Colors.black.withOpacity(0.05)), 
+                  ? Colors.white.withValues(alpha: 0.05) 
+                  : Colors.black.withValues(alpha: 0.05)), 
           width: 2,
         ),
       ),
@@ -1036,9 +1037,9 @@ class _HomePageState extends State<HomePage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.0),
-                    Colors.black.withOpacity(0.25),
-                    Colors.black.withOpacity(0.85),
+                    Colors.black.withValues(alpha: 0.0),
+                    Colors.black.withValues(alpha: 0.25),
+                    Colors.black.withValues(alpha: 0.85),
                   ],
                   stops: const [0.0, 0.55, 1.0],
                 ),
@@ -1098,8 +1099,8 @@ class _HomePageState extends State<HomePage> {
                                 : (Theme.of(context).brightness == Brightness.dark ? Colors.white24 : Colors.black26),
                           ),
                           backgroundColor: isActive 
-                              ? Theme.of(context).colorScheme.primary.withOpacity(0.2) 
-                              : (Theme.of(context).brightness == Brightness.dark ? Colors.black45 : Colors.white.withOpacity(0.7)),
+                              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2) 
+                              : (Theme.of(context).brightness == Brightness.dark ? Colors.black45 : Colors.white.withValues(alpha: 0.7)),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -1200,14 +1201,14 @@ class _HomePageState extends State<HomePage> {
                   margin: const EdgeInsets.only(right: 8, bottom: 8),
                   child: Card(
                     color: Theme.of(context).brightness == Brightness.dark 
-                        ? Colors.white.withOpacity(0.02) 
+                        ? Colors.white.withValues(alpha: 0.02) 
                         : Theme.of(context).cardColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: BorderSide(
                         color: Theme.of(context).brightness == Brightness.dark 
-                            ? Colors.white.withOpacity(0.08) 
-                            : Colors.black.withOpacity(0.08),
+                            ? Colors.white.withValues(alpha: 0.08) 
+                            : Colors.black.withValues(alpha: 0.08),
                       ),
                     ),
                     child: InkWell(
@@ -1241,10 +1242,10 @@ class _HomePageState extends State<HomePage> {
                 width: 85,
                 margin: const EdgeInsets.only(right: 8, bottom: 8),
                 child: Card(
-                  color: Colors.white.withOpacity(0.04),
+                  color: Colors.white.withValues(alpha: 0.04),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.white.withOpacity(0.05)),
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: Stack(
@@ -1392,8 +1393,8 @@ class _HomePageState extends State<HomePage> {
                   height: 40,
                   decoration: BoxDecoration(
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withOpacity(0.08)
-                        : Colors.black.withOpacity(0.05),
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.05),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -1536,7 +1537,7 @@ class _HomePageState extends State<HomePage> {
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
+                        color: primaryColor.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -1582,7 +1583,7 @@ class _HomePageState extends State<HomePage> {
                                 width: 44,
                                 height: 44,
                                 decoration: BoxDecoration(
-                                  color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+                                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(Icons.storage, color: primaryColor),
@@ -1654,7 +1655,7 @@ class _HomePageState extends State<HomePage> {
                                 width: 44,
                                 height: 44,
                                 decoration: BoxDecoration(
-                                  color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+                                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(Icons.palette_outlined, color: primaryColor),
@@ -1690,7 +1691,7 @@ class _HomePageState extends State<HomePage> {
                                 child: Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: isDark ? Colors.black26 : Colors.white.withOpacity(0.5),
+                                    color: isDark ? Colors.black26 : Colors.white.withValues(alpha: 0.5),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Row(
@@ -1699,7 +1700,7 @@ class _HomePageState extends State<HomePage> {
                                         width: 36,
                                         height: 36,
                                         decoration: BoxDecoration(
-                                          color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.03),
+                                          color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(Icons.sensors, color: primaryColor, size: 20),
@@ -1752,7 +1753,7 @@ class _HomePageState extends State<HomePage> {
                                 width: 44,
                                 height: 44,
                                 decoration: BoxDecoration(
-                                  color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+                                  color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(Icons.bolt, color: primaryColor),
@@ -1788,7 +1789,7 @@ class _HomePageState extends State<HomePage> {
                                 child: Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: isDark ? Colors.black26 : Colors.white.withOpacity(0.5),
+                                    color: isDark ? Colors.black26 : Colors.white.withValues(alpha: 0.5),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Row(
@@ -1797,7 +1798,7 @@ class _HomePageState extends State<HomePage> {
                                         width: 36,
                                         height: 36,
                                         decoration: BoxDecoration(
-                                          color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.03),
+                                          color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(Icons.battery_alert, color: primaryColor, size: 20),
@@ -2405,7 +2406,7 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                            Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
                             Theme.of(context).colorScheme.surface,
                           ],
                         ),
@@ -2479,7 +2480,7 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
               children: [
                 CustomPaint(painter: painter),
                 if (widget.isDimEnabled)
-                  Container(color: Colors.black.withOpacity(widget.dimIntensity)),
+                  Container(color: Colors.black.withValues(alpha: widget.dimIntensity)),
               ],
             ),
           );
@@ -2520,7 +2521,7 @@ class LiquidGradientPainter extends CustomPainter {
       ..shader = ui.Gradient.radial(
         Offset(x, y),
         radius,
-        [color.withOpacity(opacity), Colors.transparent],
+        [color.withValues(alpha: opacity), Colors.transparent],
       );
     canvas.drawCircle(Offset(x, y), radius, paint);
   }
@@ -2566,7 +2567,7 @@ class MatrixRainPainter extends CustomPainter {
         
         final color = j == 0 
             ? Colors.white 
-            : const Color(0xFF10B981).withOpacity(opacity);
+            : const Color(0xFF10B981).withValues(alpha: opacity);
         
         textPainter.text = TextSpan(
           text: char,
@@ -2671,7 +2672,7 @@ class PlexusPainter extends CustomPainter {
   void paint(ui.Canvas canvas, ui.Size size) {
     canvas.drawRect(ui.Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = const Color(0xFF0A0F1D));
     
-    final paintNode = Paint()..isAntiAlias = true..color = const Color(0xFF00D2FF).withOpacity(0.7);
+    final paintNode = Paint()..isAntiAlias = true..color = const Color(0xFF00D2FF).withValues(alpha: 0.7);
     final paintLine = Paint()..isAntiAlias = true..strokeWidth = 0.8;
     
     for (var n in nodes) {
@@ -2695,7 +2696,7 @@ class PlexusPainter extends CustomPainter {
         
         if (dist < 60) {
           final alpha = (1.0 - (dist / 60.0)).clamp(0.0, 1.0);
-          paintLine.color = const Color(0xFF00D2FF).withOpacity(alpha * 0.3);
+          paintLine.color = const Color(0xFF00D2FF).withValues(alpha: alpha * 0.3);
           canvas.drawLine(Offset(nodes[i].x, nodes[i].y), Offset(nodes[j].x, nodes[j].y), paintLine);
         }
       }
@@ -2739,7 +2740,7 @@ class TetrisPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
     
-    gridPaint.color = gridPaint.color.withOpacity(isRetro ? 0.12 : 0.05);
+    gridPaint.color = gridPaint.color.withValues(alpha: isRetro ? 0.12 : 0.05);
     for (int x = 0; x <= cols; x++) {
       canvas.drawLine(Offset(x * cellSize, 0), Offset(x * cellSize, size.height), gridPaint);
     }
@@ -2821,7 +2822,7 @@ class TetrisPainter extends CustomPainter {
       
       final highlightRect = ui.Rect.fromLTWH(x * cellSize + 1.6, y * cellSize + 1.6, cellSize - 3.2, 2.5);
       final highlightRRect = ui.RRect.fromRectAndRadius(highlightRect, const Radius.circular(1.0));
-      paint.color = Colors.white.withOpacity(0.25);
+      paint.color = Colors.white.withValues(alpha: 0.25);
       canvas.drawRRect(highlightRRect, paint);
     }
   }
@@ -2963,7 +2964,7 @@ class VaporwavePainter extends CustomPainter {
       final expProgress = math.pow(progress, 2.2);
       final gridY = horizon + expProgress * groundHeight;
       
-      paintGrid.color = const Color(0xFFFF007F).withOpacity(progress.clamp(0.0, 1.0));
+      paintGrid.color = const Color(0xFFFF007F).withValues(alpha: progress.clamp(0.0, 1.0));
       paintGrid.strokeWidth = progress * 2.0 + 0.3;
       canvas.drawLine(Offset(0, gridY), Offset(w, gridY), paintGrid);
     }
@@ -3018,11 +3019,11 @@ class FluidSwarmPainter extends CustomPainter {
     final paintHead = Paint()..isAntiAlias = true..style = PaintingStyle.fill;
     
     for (var p in particles) {
-      paintLine.color = p.color.withOpacity(0.5);
+      paintLine.color = p.color.withValues(alpha: 0.5);
       paintLine.strokeWidth = p.radius * 0.8;
       canvas.drawLine(Offset(p.px, p.py), Offset(p.x, p.y), paintLine);
       
-      paintHead.color = p.color.withOpacity(0.9);
+      paintHead.color = p.color.withValues(alpha: 0.9);
       canvas.drawCircle(Offset(p.x, p.y), p.radius, paintHead);
     }
   }
