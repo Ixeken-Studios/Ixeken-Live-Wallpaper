@@ -35,7 +35,6 @@ class SettingsTab extends StatelessWidget {
               const SizedBox(height: 8),
               Card(
                 color: Theme.of(context).cardColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: ListTile(
                   leading: Container(
                     width: 40,
@@ -74,7 +73,6 @@ class SettingsTab extends StatelessWidget {
             const SizedBox(height: 8),
             Card(
               color: Theme.of(context).cardColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: ListTile(
                 leading: Container(
                   width: 40,
@@ -113,7 +111,6 @@ class SettingsTab extends StatelessWidget {
             const SizedBox(height: 8),
             Card(
               color: Theme.of(context).cardColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: Column(
                 children: [
                   ListTile(

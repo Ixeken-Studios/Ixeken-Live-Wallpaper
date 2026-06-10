@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../l10n.dart';
 import 'live_wallpaper_preview.dart';
 
@@ -86,6 +87,8 @@ class CustomizerTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
       child: Align(
@@ -101,17 +104,21 @@ class CustomizerTab extends StatelessWidget {
                 width: 200,
                 height: 350,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: primaryColor.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                      blurRadius: 16,
+                      color: primaryColor.withValues(alpha: isDark ? 0.35 : 0.15),
+                      blurRadius: 24,
                       spreadRadius: 2,
                     )
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(26),
                   child: LiveWallpaperPreview(
                     engineId: selectedEngine,
                     isDimEnabled: isDimEnabled,
@@ -198,8 +205,6 @@ class CustomizerTab extends StatelessWidget {
     return Card(
       color: cardColor,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -244,7 +249,10 @@ class CustomizerTab extends StatelessWidget {
                 const SizedBox(width: 8),
                 Switch(
                   value: value,
-                  onChanged: onChanged,
+                  onChanged: (val) {
+                    HapticFeedback.lightImpact();
+                    onChanged(val);
+                  },
                   activeColor: primaryColor,
                   thumbIcon: WidgetStateProperty.resolveWith<Icon?>((Set<WidgetState> states) {
                     if (states.contains(WidgetState.selected)) {
@@ -291,8 +299,6 @@ class CustomizerTab extends StatelessWidget {
     return Card(
       color: cardColor,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -360,7 +366,10 @@ class CustomizerTab extends StatelessWidget {
                   icon: Icon(Icons.arrow_drop_down, color: primaryColor),
                   borderRadius: BorderRadius.circular(12),
                   dropdownColor: cardColor,
-                  onChanged: onChanged,
+                  onChanged: (val) {
+                    HapticFeedback.selectionClick();
+                    onChanged(val);
+                  },
                   items: items,
                   style: TextStyle(
                     fontSize: 14,
@@ -372,6 +381,44 @@ class CustomizerTab extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTactileSlider({
+    required BuildContext context,
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required String label,
+    required Color primaryColor,
+    required ValueChanged<double> onChanged,
+    required ValueChanged<double> onChangeEnd,
+  }) {
+    return SliderTheme(
+      data: SliderTheme.of(context).copyWith(
+        activeTrackColor: primaryColor,
+        inactiveTrackColor: primaryColor.withValues(alpha: 0.15),
+        trackHeight: 6,
+        thumbColor: primaryColor,
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+        overlayColor: primaryColor.withValues(alpha: 0.12),
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
+        valueIndicatorColor: primaryColor,
+        valueIndicatorTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      ),
+      child: Slider(
+        value: value,
+        min: min,
+        max: max,
+        divisions: divisions,
+        label: label,
+        onChanged: (val) {
+          HapticFeedback.selectionClick();
+          onChanged(val);
+        },
+        onChangeEnd: onChangeEnd,
       ),
     );
   }
@@ -411,13 +458,14 @@ class CustomizerTab extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Slider(
+                child: _buildTactileSlider(
+                  context: context,
                   value: dimIntensity,
                   min: 0.1,
                   max: 0.9,
                   divisions: 16,
                   label: '${(dimIntensity * 100).round()}%',
-                  activeColor: primaryColor,
+                  primaryColor: primaryColor,
                   onChanged: onDimIntensityChanged,
                   onChangeEnd: onDimIntensityChangeEnd,
                 ),
@@ -578,13 +626,14 @@ class CustomizerTab extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Slider(
+                child: _buildTactileSlider(
+                  context: context,
                   value: dimIntensity,
                   min: 0.1,
                   max: 0.9,
                   divisions: 16,
                   label: '${(dimIntensity * 100).round()}%',
-                  activeColor: primaryColor,
+                  primaryColor: primaryColor,
                   onChanged: onDimIntensityChanged,
                   onChangeEnd: onDimIntensityChangeEnd,
                 ),
@@ -644,13 +693,14 @@ class CustomizerTab extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Slider(
+                child: _buildTactileSlider(
+                  context: context,
                   value: dimIntensity,
                   min: 0.1,
                   max: 0.9,
                   divisions: 16,
                   label: '${(dimIntensity * 100).round()}%',
-                  activeColor: primaryColor,
+                  primaryColor: primaryColor,
                   onChanged: onDimIntensityChanged,
                   onChangeEnd: onDimIntensityChangeEnd,
                 ),

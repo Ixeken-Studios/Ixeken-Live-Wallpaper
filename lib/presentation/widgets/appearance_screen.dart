@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../l10n.dart';
 
@@ -159,42 +160,79 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final selectedIndex = options.indexOf(selectedValue);
+    final count = options.length;
+
+    // alignX calculation: from -1.0 to 1.0
+    final alignX = count > 1 ? -1.0 + (2.0 * selectedIndex) / (count - 1) : 0.0;
 
     return Container(
       decoration: BoxDecoration(
         color: isDark ? Colors.black26 : Colors.black.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
+        ),
       ),
       padding: const EdgeInsets.all(4),
-      child: Row(
-        children: options.map((option) {
-          final isSelected = option == selectedValue;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => onSelected(option),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? (isDark ? Colors.white : primaryColor)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  labelBuilder(option),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: isSelected
-                        ? (isDark ? Colors.black87 : Colors.white)
-                        : (isDark ? Colors.white60 : Colors.black54),
+      height: 52,
+      child: Stack(
+        children: [
+          // Sliding active pill
+          AnimatedAlign(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.fastOutSlowIn,
+            alignment: Alignment(alignX, 0.0),
+            child: FractionallySizedBox(
+              widthFactor: 1 / count,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white12 : primaryColor,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      if (!isDark)
+                        BoxShadow(
+                          color: primaryColor.withValues(alpha: 0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                    ],
                   ),
                 ),
               ),
             ),
-          );
-        }).toList(),
+          ),
+          // Interactive Texts
+          Row(
+            children: options.map((option) {
+              final isSelected = option == selectedValue;
+              return Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    onSelected(option);
+                  },
+                  child: Center(
+                    child: AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 200),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isSelected
+                            ? (isDark ? Colors.white : Colors.white)
+                            : (isDark ? Colors.white54 : Colors.black54),
+                      ),
+                      child: Text(labelBuilder(option)),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -223,8 +261,6 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
             children: [
               Card(
                 color: cardColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                elevation: 0,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -268,8 +304,6 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
               const SizedBox(height: 16),
               Card(
                 color: cardColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                elevation: 0,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(

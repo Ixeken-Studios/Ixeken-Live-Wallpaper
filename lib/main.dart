@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'wallpaper_manager.dart';
 import 'l10n.dart';
 import 'presentation/widgets/customizer_tab.dart';
@@ -37,65 +38,126 @@ class IxekenApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeModeNotifier,
-      builder: (context, currentMode, child) {
-        return ValueListenableBuilder<String>(
-          valueListenable: fontFamilyNotifier,
-          builder: (context, currentFont, child) {
-            final textTheme = currentFont == 'nunito'
-                ? GoogleFonts.nunitoTextTheme()
-                : currentFont == 'gs_flex'
-                    ? GoogleFonts.outfitTextTheme()
-                    : null;
+    return DynamicColorBuilder(
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        return ValueListenableBuilder<ThemeMode>(
+          valueListenable: themeModeNotifier,
+          builder: (context, currentMode, child) {
+            return ValueListenableBuilder<String>(
+              valueListenable: fontFamilyNotifier,
+              builder: (context, currentFont, child) {
+                ColorScheme lightColorScheme;
+                ColorScheme darkColorScheme;
 
-            return MaterialApp(
-              onGenerateTitle: (context) => L10n.of(context).appTitle,
-              debugShowCheckedModeBanner: false,
-              themeMode: currentMode,
-              localizationsDelegates: const [
-                L10nDelegate(),
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: const [
-                Locale('es'),
-                Locale('en'),
-              ],
-              theme: ThemeData(
-                brightness: Brightness.light,
-                primaryColor: kStreamBlue,
-                scaffoldBackgroundColor: kVanillaCloud,
-                useMaterial3: true,
-                colorScheme: ColorScheme.fromSeed(
-                  seedColor: kStreamBlue,
-                  brightness: Brightness.light,
-                  surface: kVanillaCloud,
-                  primary: kStreamBlue,
-                  secondary: kStreamBlueAccent,
-                ),
-                cardColor: kVanillaCloudCard,
-                dividerColor: Colors.black12,
-                textTheme: textTheme,
-              ),
-              darkTheme: ThemeData(
-                brightness: Brightness.dark,
-                primaryColor: kLavenderHaze,
-                scaffoldBackgroundColor: kSoftGraphite,
-                useMaterial3: true,
-                colorScheme: ColorScheme.fromSeed(
-                  seedColor: kLavenderHaze,
-                  brightness: Brightness.dark,
-                  surface: kSoftGraphite,
-                  primary: kLavenderHaze,
-                  secondary: kLavenderAccent,
-                ),
-                cardColor: kSoftGraphiteCard,
-                dividerColor: Colors.white12,
-                textTheme: textTheme,
-              ),
-              home: const HomePage(),
+                if (lightDynamic != null && darkDynamic != null) {
+                  lightColorScheme = lightDynamic;
+                  darkColorScheme = darkDynamic;
+                } else {
+                  lightColorScheme = ColorScheme.fromSeed(
+                    seedColor: kStreamBlue,
+                    brightness: Brightness.light,
+                  ).copyWith(
+                    surface: kVanillaCloud,
+                    primary: kStreamBlue,
+                    secondary: kStreamBlueAccent,
+                  );
+                  darkColorScheme = ColorScheme.fromSeed(
+                    seedColor: kLavenderHaze,
+                    brightness: Brightness.dark,
+                  ).copyWith(
+                    surface: kSoftGraphite,
+                    primary: kLavenderHaze,
+                    secondary: kLavenderAccent,
+                  );
+                }
+
+                final textTheme = currentFont == 'nunito'
+                    ? GoogleFonts.nunitoTextTheme()
+                    : currentFont == 'gs_flex'
+                        ? GoogleFonts.outfitTextTheme()
+                        : GoogleFonts.nunitoTextTheme().copyWith(
+                            displayLarge: GoogleFonts.outfit(),
+                            displayMedium: GoogleFonts.outfit(),
+                            displaySmall: GoogleFonts.outfit(),
+                            headlineLarge: GoogleFonts.outfit(),
+                            headlineMedium: GoogleFonts.outfit(),
+                            headlineSmall: GoogleFonts.outfit(),
+                            titleLarge: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                            titleMedium: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                            titleSmall: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                          );
+
+                final cardColorLight = lightDynamic != null 
+                    ? lightColorScheme.surfaceContainerLow 
+                    : kVanillaCloudCard;
+                final cardColorDark = darkDynamic != null 
+                    ? darkColorScheme.surfaceContainerLow 
+                    : kSoftGraphiteCard;
+
+                final scaffoldBgLight = lightDynamic != null 
+                    ? lightColorScheme.surface 
+                    : kVanillaCloud;
+                final scaffoldBgDark = darkDynamic != null 
+                    ? darkColorScheme.surface 
+                    : kSoftGraphite;
+
+                return MaterialApp(
+                  onGenerateTitle: (context) => L10n.of(context).appTitle,
+                  debugShowCheckedModeBanner: false,
+                  themeMode: currentMode,
+                  localizationsDelegates: const [
+                    L10nDelegate(),
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
+                  supportedLocales: const [
+                    Locale('es'),
+                    Locale('en'),
+                  ],
+                  theme: ThemeData(
+                    brightness: Brightness.light,
+                    primaryColor: lightColorScheme.primary,
+                    scaffoldBackgroundColor: scaffoldBgLight,
+                    useMaterial3: true,
+                    colorScheme: lightColorScheme,
+                    cardColor: cardColorLight,
+                    dividerColor: Colors.black12,
+                    textTheme: textTheme,
+                    cardTheme: CardThemeData(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        side: BorderSide(
+                          color: lightColorScheme.onSurface.withValues(alpha: 0.05),
+                          width: 1,
+                        ),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                  darkTheme: ThemeData(
+                    brightness: Brightness.dark,
+                    primaryColor: darkColorScheme.primary,
+                    scaffoldBackgroundColor: scaffoldBgDark,
+                    useMaterial3: true,
+                    colorScheme: darkColorScheme,
+                    cardColor: cardColorDark,
+                    dividerColor: Colors.white12,
+                    textTheme: textTheme,
+                    cardTheme: CardThemeData(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                        side: BorderSide(
+                          color: darkColorScheme.onSurface.withValues(alpha: 0.05),
+                          width: 1,
+                        ),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                  home: const HomePage(),
+                );
+              },
             );
           },
         );
@@ -550,6 +612,8 @@ class _HomePageState extends State<HomePage> {
   Widget _buildFloatingNavigationBar() {
     final l = L10n.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return SafeArea(
       top: false,
       child: Align(
@@ -574,16 +638,39 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(36),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildNavItem(0, Icons.edit_note_outlined, l.tabAdjust),
-                _buildNavItem(1, Icons.collections_outlined, l.tabLibrary),
-                _buildNavItem(2, Icons.settings_outlined, l.tabOptions),
-              ],
-            ),
+          child: Stack(
+            children: [
+              AnimatedAlign(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.fastOutSlowIn,
+                alignment: Alignment((_currentTab - 1) * 1.0, 0.0),
+                child: FractionallySizedBox(
+                  widthFactor: 1 / 3,
+                  child: Center(
+                    child: Container(
+                      width: 90,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: primaryColor.withValues(alpha: 0.15),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(child: _buildNavItem(0, Icons.edit_note_outlined, l.tabAdjust)),
+                  Expanded(child: _buildNavItem(1, Icons.collections_outlined, l.tabLibrary)),
+                  Expanded(child: _buildNavItem(2, Icons.settings_outlined, l.tabOptions)),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -593,26 +680,33 @@ class _HomePageState extends State<HomePage> {
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _currentTab == index;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
     final color = isSelected 
-        ? Theme.of(context).colorScheme.primary 
+        ? primaryColor 
         : (isDark ? Colors.white60 : Colors.black45);
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() => _currentTab = index),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      child: AnimatedScale(
+        scale: isSelected ? 1.08 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutBack,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
