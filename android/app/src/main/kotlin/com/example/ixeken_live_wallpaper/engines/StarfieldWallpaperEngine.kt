@@ -14,6 +14,7 @@ class StarfieldWallpaperEngine(private val context: Context) : IxekenWallpaperEn
     private var currentHolder: SurfaceHolder? = null
     private var isVisible = false
     private val paint = Paint().apply { isAntiAlias = true }
+    private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
     
     private val stars = mutableListOf<Star>()
     private val numStars = 150
@@ -122,6 +123,13 @@ class StarfieldWallpaperEngine(private val context: Context) : IxekenWallpaperEn
                 canvas.drawCircle(x2d, y2d, thickness * 0.7f, paint)
             }
         }
+
+        val isDim = prefs.getBoolean("isDimEnabled", false)
+        if (isDim) {
+            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
+            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
+            canvas.drawColor(Color.argb(alpha, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_OVER)
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent) {
@@ -148,8 +156,12 @@ class StarfieldWallpaperEngine(private val context: Context) : IxekenWallpaperEn
 
     private fun drawFrame() {
         val holder = currentHolder ?: return
-        val canvas = if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        if (canvas == null) return
+        if (!holder.surface.isValid) return
+        val canvas = try {
+            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
+        } catch (e: Exception) {
+            try { holder.lockCanvas() } catch (ex: Exception) { null }
+        } ?: return
         try {
             onDraw(canvas)
         } finally {

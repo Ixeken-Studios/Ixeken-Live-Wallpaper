@@ -19,6 +19,7 @@ class FluidSwarmWallpaperEngine(private val context: Context) : IxekenWallpaperE
     private var isVisible = false
     private val paint = Paint().apply { isAntiAlias = true }
     private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
+    private var engineHost: android.service.wallpaper.WallpaperService.Engine? = null
     
     private val particles = mutableListOf<FluidParticle>()
     private val numParticles = 140
@@ -28,15 +29,49 @@ class FluidSwarmWallpaperEngine(private val context: Context) : IxekenWallpaperE
     private var touchX = 0f
     private var touchY = 0f
     
+    private var lastLockFrameTimeMs = 0L
+    
     private val frameCallback = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             if (isVisible) {
-                time += 0.01f
-                updateLogic()
-                drawFrame()
+                if (isLockScreen()) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastLockFrameTimeMs >= 1000L) {
+                        lastLockFrameTimeMs = now
+                        time += 0.01f
+                        updateLogic()
+                        drawFrame()
+                    }
+                } else {
+                    time += 0.01f
+                    updateLogic()
+                    drawFrame()
+                }
                 Choreographer.getInstance().postFrameCallback(this)
             }
         }
+    }
+
+    override fun setEngineHost(host: android.service.wallpaper.WallpaperService.Engine) {
+        engineHost = host
+    }
+
+    private fun isLockScreen(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            val host = engineHost
+            if (host != null) {
+                val flags = try { host.getWallpaperFlags() } catch (e: Exception) { 0 }
+                if (flags != 0) {
+                    val isLock = (flags and android.app.WallpaperManager.FLAG_LOCK) != 0
+                    val isSystem = (flags and android.app.WallpaperManager.FLAG_SYSTEM) != 0
+                    if (isLock && !isSystem) {
+                        return true
+                    }
+                }
+            }
+        }
+        val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+        return keyguardManager?.isKeyguardLocked == true
     }
 
     override fun onCreate(holder: SurfaceHolder) {
@@ -138,7 +173,9 @@ class FluidSwarmWallpaperEngine(private val context: Context) : IxekenWallpaperE
         }
 
         if (isDim) {
-            canvas.drawColor(Color.argb(110, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
+            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
+            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
+            canvas.drawColor(Color.argb(alpha, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
         }
     }
 
@@ -172,8 +209,12 @@ class FluidSwarmWallpaperEngine(private val context: Context) : IxekenWallpaperE
 
     private fun drawFrame() {
         val holder = currentHolder ?: return
-        val canvas = if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        if (canvas == null) return
+        if (!holder.surface.isValid) return
+        val canvas = try {
+            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
+        } catch (e: Exception) {
+            try { holder.lockCanvas() } catch (ex: Exception) { null }
+        } ?: return
         try {
             onDraw(canvas)
         } finally {

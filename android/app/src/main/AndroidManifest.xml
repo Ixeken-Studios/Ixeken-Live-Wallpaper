@@ -2,9 +2,11 @@
     <!-- Permiso necesario para Live Wallpapers -->
     <uses-feature android:name="android.software.live_wallpaper" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <!-- Permissions required for reading files depending on android version -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"

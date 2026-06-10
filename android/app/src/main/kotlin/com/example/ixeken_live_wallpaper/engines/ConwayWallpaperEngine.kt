@@ -30,15 +30,24 @@ class ConwayWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
     private var stagnancyCounter = 0
     private var previousHash = 0
     
+    private var lastFrameTimeMs = 0L
+
     private val frameCallback = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             if (isVisible) {
                 val now = System.currentTimeMillis()
-                if (now - lastUpdate >= updateInterval) {
-                    updateLogic()
-                    lastUpdate = now
+                val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+                val isPowerSave = powerManager?.isPowerSaveMode == true
+                val targetInterval = if (isPowerSave) 33L else 0L
+                
+                if (now - lastFrameTimeMs >= targetInterval) {
+                    lastFrameTimeMs = now
+                    if (now - lastUpdate >= updateInterval) {
+                        updateLogic()
+                        lastUpdate = now
+                    }
+                    drawFrame()
                 }
-                drawFrame()
                 Choreographer.getInstance().postFrameCallback(this)
             }
         }
@@ -152,7 +161,9 @@ class ConwayWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
         paint.clearShadowLayer()
 
         if (isDim) {
-            canvas.drawColor(Color.argb(110, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
+            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
+            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
+            canvas.drawColor(Color.argb(alpha, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
         }
     }
 
@@ -199,8 +210,12 @@ class ConwayWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
 
     private fun drawFrame() {
         val holder = currentHolder ?: return
-        val canvas = if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        if (canvas == null) return
+        if (!holder.surface.isValid) return
+        val canvas = try {
+            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
+        } catch (e: Exception) {
+            try { holder.lockCanvas() } catch (ex: Exception) { null }
+        } ?: return
         try {
             onDraw(canvas)
         } finally {

@@ -137,14 +137,20 @@ class VaporwaveWallpaperEngine(private val context: Context) : IxekenWallpaperEn
 
         // 5. Capa Dim si está activa
         if (isDim) {
-            canvas.drawColor(Color.argb(110, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
+            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
+            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
+            canvas.drawColor(Color.argb(alpha, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
         }
     }
 
     private fun drawFrame() {
         val holder = currentHolder ?: return
-        val canvas = if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        if (canvas == null) return
+        if (!holder.surface.isValid) return
+        val canvas = try {
+            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
+        } catch (e: Exception) {
+            try { holder.lockCanvas() } catch (ex: Exception) { null }
+        } ?: return
         try {
             onDraw(canvas)
         } finally {

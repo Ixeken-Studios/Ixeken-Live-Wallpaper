@@ -3,7 +3,15 @@ package com.example.ixeken_live_wallpaper.engines
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.*
-import android.media.MediaPlayer
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.net.Uri
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import java.io.File
 import android.os.Handler
 import android.os.Looper
 import android.view.Choreographer
@@ -11,7 +19,7 @@ import android.view.SurfaceHolder
 import java.util.*
 import kotlin.concurrent.thread
 
-class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEngine {
+class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEngine, SensorEventListener {
     
     private val prefs: SharedPreferences = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -20,7 +28,7 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
         colorFilter = PorterDuffColorFilter(Color.argb(110, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
     }
 
-    private var mediaPlayer: MediaPlayer? = null
+    private var mediaPlayer: ExoPlayer? = null
     private var isVideo = false
     private var currentMediaPath: String? = null
     private var currentBitmap: Bitmap? = null
@@ -34,37 +42,119 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
     private var currentIndex = -1
     private var nextIndex = -1
     private var currentHolder: SurfaceHolder? = null
+    private var isDestroyed = false
+    private var isVisible = false
+    private var carouselChangeMode = "on_visibility"
+    private var carouselChangeInterval = 60
+
+    private val changeRunnable = object : Runnable {
+        override fun run() {
+            if (isVisible && !isDestroyed && carouselChangeMode == "timer") {
+                applyRotation()
+                val intervalMs = carouselChangeInterval * 1000L
+                mainHandler.postDelayed(this, intervalMs)
+            }
+        }
+    }
+
+    private var sensorManager: SensorManager? = null
+    private var rotationSensor: Sensor? = null
+    private var isParallaxEnabled = false
+    private var targetOffsetX = 0f
+    private var targetOffsetY = 0f
+    private var smoothOffsetX = 0f
+    private var smoothOffsetY = 0f
 
     private val frameCallback = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
+            var continueCallback = false
             if (isAnimating) {
                 fadeAlpha += 42
                 if (fadeAlpha >= 255) {
                     fadeAlpha = 255
                     isAnimating = false
-                    drawCurrentFrame()
                     previousBitmap?.recycle()
                     previousBitmap = null
-                } else {
-                    drawCurrentFrame()
-                    Choreographer.getInstance().postFrameCallback(this)
                 }
+                continueCallback = true
+            }
+            
+            if (isParallaxEnabled) {
+                smoothOffsetX = smoothOffsetX * 0.9f + targetOffsetX * 0.1f
+                smoothOffsetY = smoothOffsetY * 0.9f + targetOffsetY * 0.1f
+                continueCallback = true
+            }
+            
+            drawCurrentFrame()
+            
+            if (isVisible && continueCallback) {
+                Choreographer.getInstance().postFrameCallback(this)
             }
         }
     }
 
     override fun onCreate(holder: SurfaceHolder) {
         currentHolder = holder
+        isParallaxEnabled = prefs.getBoolean("isParallaxEnabled", false)
+        carouselChangeMode = prefs.getString("carousel_change_mode", "on_visibility") ?: "on_visibility"
+        carouselChangeInterval = prefs.getInt("carousel_change_interval", 60)
+        if (isParallaxEnabled) {
+            sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+            rotationSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+                ?: sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        }
         updateCurrentPlaylist()
         drawCurrentFrame()
     }
 
+    private fun registerSensor() {
+        if (isParallaxEnabled && sensorManager != null && rotationSensor != null) {
+            sensorManager?.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_GAME)
+        }
+    }
+
+    private fun unregisterSensor() {
+        if (isParallaxEnabled && sensorManager != null) {
+            sensorManager?.unregisterListener(this)
+        }
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event == null) return
+        var targetX = 0f
+        var targetY = 0f
+        
+        if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
+            val rotationMatrix = FloatArray(9)
+            SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
+            val orientation = FloatArray(3)
+            SensorManager.getOrientation(rotationMatrix, orientation)
+            targetX = -orientation[2]
+            targetY = -orientation[1]
+        } else if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+            targetX = event.values[0] / 9.8f
+            targetY = (event.values[1] - 5f) / 9.8f
+        }
+        
+        val maxOffset = 60f
+        targetOffsetX = targetX.coerceIn(-1f, 1f) * maxOffset
+        targetOffsetY = targetY.coerceIn(-1f, 1f) * maxOffset
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
     private fun updateCurrentPlaylist() {
+        val syncSystemTheme = prefs.getBoolean("syncWithSystemTheme", false)
         val useDayNight = prefs.getBoolean("useDayNightMode", false)
-        val key = if (useDayNight) {
-            if (isDayTime()) "playlist_day" else "playlist_night"
-        } else {
-            "playlist"
+        
+        val key = when {
+            syncSystemTheme -> {
+                if (isSystemNightMode()) "playlist_night" else "playlist_day"
+            }
+            useDayNight -> {
+                if (isDayTime()) "playlist_day" else "playlist_night"
+            }
+            else -> "playlist"
         }
         val savedList = prefs.getString(key, "")
         val newPlaylist = if (!savedList.isNullOrEmpty()) savedList.split("||") else emptyList()
@@ -102,13 +192,38 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
         return if (start < end) now in start until end else now >= start || now < end
     }
 
+    private fun isSystemNightMode(): Boolean {
+        val uiMode = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        return uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    }
+
     override fun onVisibilityChanged(visible: Boolean) {
+        isVisible = visible
         if (visible) {
             updateCurrentPlaylist()
+            carouselChangeMode = prefs.getString("carousel_change_mode", "on_visibility") ?: "on_visibility"
+            carouselChangeInterval = prefs.getInt("carousel_change_interval", 60)
+            
             drawCurrentFrame()
-            if (isVideo) mediaPlayer?.start()
+            if (isVideo) mediaPlayer?.play()
+            registerSensor()
+            
+            mainHandler.removeCallbacks(changeRunnable)
+            if (carouselChangeMode == "timer") {
+                val intervalMs = carouselChangeInterval * 1000L
+                mainHandler.postDelayed(changeRunnable, intervalMs)
+            }
+            
+            if (isAnimating || isParallaxEnabled) {
+                Choreographer.getInstance().removeFrameCallback(frameCallback)
+                Choreographer.getInstance().postFrameCallback(frameCallback)
+            }
         } else {
-            applyRotation() // Siempre al apagar por requerimiento v1.0
+            unregisterSensor()
+            mainHandler.removeCallbacks(changeRunnable)
+            if (carouselChangeMode == "on_visibility") {
+                applyRotation()
+            }
             if (isVideo) mediaPlayer?.pause()
         }
     }
@@ -145,7 +260,14 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
                 currentMediaPath = nextPath
                 thread {
                     val bitmap = loadAndScaleBitmap(currentMediaPath)
-                    mainHandler.post { currentBitmap = bitmap; startFadeAnimation() }
+                    mainHandler.post { 
+                        if (!isDestroyed) {
+                            currentBitmap = bitmap
+                            startFadeAnimation()
+                        } else {
+                            bitmap?.recycle()
+                        }
+                    }
                 }
             }
             
@@ -169,13 +291,34 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
             thread {
                 val bitmap = loadAndScaleBitmap(peekPath)
                 mainHandler.post { 
-                    if (nextPreloadedBitmap != bitmap) {
-                        nextPreloadedBitmap?.recycle()
-                        nextPreloadedBitmap = bitmap 
-                        preloadedPath = peekPath
+                    if (!isDestroyed) {
+                        if (nextPreloadedBitmap != bitmap) {
+                            nextPreloadedBitmap?.recycle()
+                            nextPreloadedBitmap = bitmap 
+                            preloadedPath = peekPath
+                        }
+                    } else {
+                        bitmap?.recycle()
                     }
                 }
             }
+        }
+    }
+
+    private fun applyDimToBitmap(src: Bitmap): Bitmap {
+        if (!prefs.getBoolean("isDimEnabled", false)) return src
+        return try {
+            val result = Bitmap.createBitmap(src.width, src.height, src.config ?: Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(result)
+            val p = Paint().apply { isFilterBitmap = true }
+            canvas.drawBitmap(src, 0f, 0f, p)
+            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
+            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
+            canvas.drawColor(Color.argb(alpha, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
+            src.recycle()
+            result
+        } catch (e: Exception) {
+            src
         }
     }
 
@@ -185,10 +328,15 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
             val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(path, options)
             val frame = currentHolder?.surfaceFrame ?: Rect(0,0,1080,1920)
-            options.inSampleSize = calculateInSampleSize(options, frame.width(), frame.height())
+            
+            val targetW = if (isParallaxEnabled) (frame.width() * 1.1f).toInt() else frame.width()
+            val targetH = if (isParallaxEnabled) (frame.height() * 1.1f).toInt() else frame.height()
+            
+            options.inSampleSize = calculateInSampleSize(options, targetW, targetH)
             options.inJustDecodeBounds = false
             val decoded = BitmapFactory.decodeFile(path, options) ?: return null
-            createCenterCropBitmap(decoded, frame.width(), frame.height())
+            val cropped = createCenterCropBitmap(decoded, targetW, targetH)
+            applyDimToBitmap(cropped)
         } catch (e: Exception) { null }
     }
 
@@ -205,58 +353,96 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
 
     private fun setupMediaPlayer() {
         releaseMediaPlayer()
+        val path = currentMediaPath ?: return
         try {
-            mediaPlayer = MediaPlayer().apply {
-                setDataSource(currentMediaPath)
-                setSurface(currentHolder?.surface)
-                isLooping = true
-                setVolume(0f, 0f)
+            mediaPlayer = ExoPlayer.Builder(context).build().apply {
+                setVideoSurfaceHolder(currentHolder)
+                repeatMode = Player.REPEAT_MODE_ALL
+                volume = 0f
+                setMediaItem(MediaItem.fromUri(Uri.fromFile(File(path))))
                 prepare()
+                playWhenReady = isVisible
             }
         } catch (e: Exception) {}
     }
 
     private fun releaseMediaPlayer() {
-        mediaPlayer?.apply { if (isPlaying) stop(); release() }
+        mediaPlayer?.release()
         mediaPlayer = null
     }
 
     private fun drawCurrentFrame() {
-        val canvas = if (android.os.Build.VERSION.SDK_INT >= 26) currentHolder?.lockHardwareCanvas() else currentHolder?.lockCanvas()
-        if (canvas == null) return
+        if (!isVisible) return
+        val holder = currentHolder ?: return
+        if (!holder.surface.isValid) return
+        val canvas = try {
+            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
+        } catch (e: Exception) {
+            try { holder.lockCanvas() } catch (ex: Exception) { null }
+        } ?: return
         try {
             onDraw(canvas)
         } finally {
-            currentHolder?.unlockCanvasAndPost(canvas)
+            holder.unlockCanvasAndPost(canvas)
         }
     }
 
     override fun onDraw(canvas: Canvas) {
+        canvas.save()
+        if (isParallaxEnabled) {
+            canvas.translate(smoothOffsetX, smoothOffsetY)
+        }
+        
+        val frame = currentHolder?.surfaceFrame ?: Rect(0,0,1080,1920)
+        val screenW = frame.width().toFloat()
+        val screenH = frame.height().toFloat()
+        
         if (!isVideo) {
             if (isAnimating && previousBitmap != null) {
                 paint.alpha = 255
-                canvas.drawBitmap(previousBitmap!!, 0f, 0f, paint)
+                drawBitmapCentered(canvas, previousBitmap!!, screenW, screenH)
                 paint.alpha = fadeAlpha
-                canvas.drawBitmap(currentBitmap!!, 0f, 0f, paint)
+                drawBitmapCentered(canvas, currentBitmap!!, screenW, screenH)
             } else if (currentBitmap != null) {
                 paint.alpha = 255
-                canvas.drawBitmap(currentBitmap!!, 0f, 0f, paint)
-            }
-            if (prefs.getBoolean("isDimEnabled", false)) {
-                canvas.drawColor(Color.argb(110, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
+                drawBitmapCentered(canvas, currentBitmap!!, screenW, screenH)
             }
         }
+        canvas.restore()
+    }
+
+    private fun drawBitmapCentered(canvas: Canvas, bitmap: Bitmap, screenW: Float, screenH: Float) {
+        val dx = (screenW - bitmap.width) / 2f
+        val dy = (screenH - bitmap.height) / 2f
+        canvas.drawBitmap(bitmap, dx, dy, paint)
     }
 
     override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         currentHolder = holder
+        if (isVideo) {
+            try {
+                mediaPlayer?.setVideoSurfaceHolder(holder)
+            } catch (e: Exception) {}
+        }
         drawCurrentFrame()
     }
 
     override fun onDestroy() {
+        isDestroyed = true
+        mainHandler.removeCallbacks(changeRunnable)
         Choreographer.getInstance().removeFrameCallback(frameCallback)
         clearBitmaps()
         releaseMediaPlayer()
+    }
+
+    override fun onTrimMemory(level: Int) {
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            nextPreloadedBitmap?.recycle()
+            nextPreloadedBitmap = null
+            preloadedPath = null
+            previousBitmap?.recycle()
+            previousBitmap = null
+        }
     }
 
     private fun clearBitmaps() {

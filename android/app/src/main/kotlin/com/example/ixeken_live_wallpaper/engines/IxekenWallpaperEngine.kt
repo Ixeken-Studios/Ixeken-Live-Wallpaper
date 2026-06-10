@@ -25,4 +25,10 @@ interface IxekenWallpaperEngine {
     
     /** (Opcional) Manejo de toques en la pantalla */
     fun onTouchEvent(event: android.view.MotionEvent) {}
+
+    /** (Opcional) Liberación de memoria bajo presión del sistema */
+    fun onTrimMemory(level: Int) {}
+
+    /** (Opcional) Vinculación del host del motor */
+    fun setEngineHost(host: android.service.wallpaper.WallpaperService.Engine) {}
 }

@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 import 'wallpaper_manager.dart';
+import 'l10n.dart';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+
+// Paletas de Diseño
+const Color kLavenderHaze = Color(0xFF92A9E1);
+const Color kSoftGraphite = Color(0xFF222222);
+const Color kSoftGraphiteCard = Color(0xFF2C2C2E);
+const Color kLavenderAccent = Color(0xFF728FCE);
+
+const Color kVanillaCloud = Color(0xFFFDF8F2);
+const Color kVanillaCloudCard = Color(0xFFF4EDE4);
+const Color kStreamBlue = Color(0xFF1E56CD);
+const Color kStreamBlueAccent = Color(0xFF16429E);
+
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.system);
 
 void main() {
   runApp(const IxekenApp());
@@ -16,19 +32,56 @@ class IxekenApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ixeken Live Wallpaper',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        primaryColor: Colors.deepPurple,
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.dark,
-        ),
-      ),
-      home: const HomePage(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeModeNotifier,
+      builder: (context, currentMode, child) {
+        return MaterialApp(
+          onGenerateTitle: (context) => L10n.of(context).appTitle,
+          debugShowCheckedModeBanner: false,
+          themeMode: currentMode,
+          localizationsDelegates: const [
+            L10nDelegate(),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('es'),
+            Locale('en'),
+          ],
+          theme: ThemeData(
+            brightness: Brightness.light,
+            primaryColor: kStreamBlue,
+            scaffoldBackgroundColor: kVanillaCloud,
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: kStreamBlue,
+              brightness: Brightness.light,
+              surface: kVanillaCloud,
+              primary: kStreamBlue,
+              secondary: kStreamBlueAccent,
+            ),
+            cardColor: kVanillaCloudCard,
+            dividerColor: Colors.black12,
+          ),
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            primaryColor: kLavenderHaze,
+            scaffoldBackgroundColor: kSoftGraphite,
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: kLavenderHaze,
+              brightness: Brightness.dark,
+              surface: kSoftGraphite,
+              primary: kLavenderHaze,
+              secondary: kLavenderAccent,
+            ),
+            cardColor: kSoftGraphiteCard,
+            dividerColor: Colors.white12,
+          ),
+          home: const HomePage(),
+        );
+      },
     );
   }
 }
@@ -54,33 +107,49 @@ class _HomePageState extends State<HomePage> {
   int _dayStartHour = 6;
   int _nightStartHour = 18;
   String _selectedEngine = 'carousel';
+  bool _syncWithSystemTheme = false;
+  bool _isParallaxEnabled = false;
+  int _currentTab = 0;
+  String _searchQuery = '';
+  double _dimIntensity = 0.43;
+  String _carouselChangeMode = 'on_visibility';
+  int _carouselChangeInterval = 60;
+  String _appThemeMode = 'system';
 
-  final Map<String, String> _engines = {
-    'carousel': 'Carrusel de Medios',
-    'particles': 'Ixeken Particles 🌌',
-    'tetris': 'Ixeken Tetris AI 🕹️',
-    'matrix': 'Matrix Code Rain 💾',
-    'plexus': 'Ixeken Plexus 🕸️',
-    'liquid': 'Liquid Gradient 🌊',
-    'starfield': 'Túnel de Estrellas ✨',
-    'vaporwave': 'Retro Vaporwave 🌅',
-    'conway': 'Game of Life 🦠',
-    'fluids': 'Swarm Fluids 💨',
-  };
+  Map<String, String> getEngines(BuildContext context) {
+    final l = L10n.of(context);
+    return {
+      'carousel': l.engineCarousel,
+      'particles': '${l.engineParticles} 🌌',
+      'tetris': '${l.engineTetris} 🕹️',
+      'matrix': '${l.engineMatrix} 💾',
+      'plexus': '${l.enginePlexus} 🕸️',
+      'liquid': '${l.engineLiquid} 🌊',
+      'starfield': '${l.engineStarfield} ✨',
+      'vaporwave': '${l.engineVaporwave} 🌅',
+      'conway': '${l.engineConway} 🦠',
+      'fluids': '${l.engineFluids} 💨',
+    };
+  }
 
-  final Map<String, String> _engineDescriptions = {
-    'particles': 'Un fondo dinámico con partículas de neón que flotan y rebotan suavemente por toda tu pantalla. Optimizado para un consumo mínimo de batería.',
-    'tetris': 'Revive el clásico con una IA que juega automáticamente. Las piezas buscan huecos inteligentemente para completar líneas y mantener el tablero limpio.',
-    'matrix': 'La icónica lluvia de caracteres digitales. Transforma tu pantalla en una terminal de datos con estelas de neón verde sobre negro profundo.',
-    'plexus': 'Una red neuronal de puntos conectados por líneas dinámicas. El sistema detecta la proximidad de los nodos para crear una malla tecnológica en tiempo real.',
-    'liquid': 'Colores profundos que fluyen y se mezclan lentamente, creando una atmósfera minimalista y relajante que cambia de forma orgánica.',
-    'starfield': 'Viaja a través del hiperespacio en 3D. Toca la pantalla para activar el hiperimpulsor y ver las estrellas estirarse a velocidad luz.',
-    'vaporwave': 'Un atardecer retro de los 80s con rejillas púrpuras en perspectiva 3D desplazándose de forma infinita hacia adelante.',
-    'conway': 'El Juego de la Vida de Conway. Células de neón cian que viven, mueren y evolucionan de forma autónoma. ¡Toca la pantalla para sembrar vida!',
-    'fluids': 'Enjambre interactivo de partículas que fluyen como remolinos de humo. El enjambre reacciona dinámicamente siguiendo el arrastre de tus dedos.',
-  };
+  Map<String, String> getEngineDescriptions(BuildContext context) {
+    final l = L10n.of(context);
+    return {
+      'carousel': l.descCarousel,
+      'particles': l.descParticles,
+      'matrix': l.descMatrix,
+      'plexus': l.descPlexus,
+      'liquid': l.descLiquid,
+      'tetris': l.descTetris,
+      'starfield': l.descStarfield,
+      'vaporwave': l.descVaporwave,
+      'conway': l.descConway,
+      'fluids': l.descFluids,
+    };
+  }
 
   final Map<String, IconData> _engineIcons = {
+    'carousel': Icons.photo_library_outlined,
     'particles': Icons.blur_on,
     'tetris': Icons.grid_view_rounded,
     'matrix': Icons.code,
@@ -96,10 +165,24 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadPersistedData();
+    const MethodChannel('com.ixeken.wallpaper/media').setMethodCallHandler((call) async {
+      if (call.method == 'onPlaylistError') {
+        final List<dynamic> failed = call.arguments;
+        if (mounted && failed.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(L10n.of(context).skippedFiles(failed.length)),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
+    });
   }
 
   Future<void> _loadPersistedData() async {
     final prefs = await SharedPreferences.getInstance();
+    final savedMode = prefs.getString('app_theme_mode') ?? 'system';
     setState(() {
       _playlistGeneral = prefs.getStringList('playlist_general') ?? [];
       _playlistDay = prefs.getStringList('playlist_day') ?? [];
@@ -111,7 +194,21 @@ class _HomePageState extends State<HomePage> {
       _dayStartHour = prefs.getInt('day_start') ?? 6;
       _nightStartHour = prefs.getInt('night_start') ?? 18;
       _selectedEngine = prefs.getString('selected_engine') ?? 'carousel';
+      _syncWithSystemTheme = prefs.getBool('sync_with_system_theme') ?? false;
+      _isParallaxEnabled = prefs.getBool('is_parallax') ?? false;
+      _dimIntensity = prefs.getDouble('dim_intensity') ?? 0.43;
+      _carouselChangeMode = prefs.getString('carousel_change_mode') ?? 'on_visibility';
+      _carouselChangeInterval = prefs.getInt('carousel_change_interval') ?? 60;
+      _appThemeMode = savedMode;
     });
+
+    if (savedMode == 'light') {
+      themeModeNotifier.value = ThemeMode.light;
+    } else if (savedMode == 'dark') {
+      themeModeNotifier.value = ThemeMode.dark;
+    } else {
+      themeModeNotifier.value = ThemeMode.system;
+    }
   }
 
   Future<void> _savePersistedData() async {
@@ -126,31 +223,62 @@ class _HomePageState extends State<HomePage> {
     await prefs.setInt('day_start', _dayStartHour);
     await prefs.setInt('night_start', _nightStartHour);
     await prefs.setString('selected_engine', _selectedEngine);
+    await prefs.setBool('sync_with_system_theme', _syncWithSystemTheme);
+    await prefs.setBool('is_parallax', _isParallaxEnabled);
+    await prefs.setDouble('dim_intensity', _dimIntensity);
+    await prefs.setString('carousel_change_mode', _carouselChangeMode);
+    await prefs.setInt('carousel_change_interval', _carouselChangeInterval);
+    await prefs.setString('app_theme_mode', _appThemeMode);
   }
 
   Future<void> _pickFiles(String type) async {
     if (Platform.isAndroid) {
-      await [Permission.storage, Permission.photos, Permission.videos].request();
+      await [Permission.photos].request();
     }
 
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      type: FileType.media,
-    );
+    final ImagePicker picker = ImagePicker();
+    final List<XFile> result = await picker.pickMultiImage();
 
-    if (result != null) {
-      setState(() {
-        final paths = result.paths.whereType<String>();
-        if (type == 'general') _playlistGeneral.addAll(paths);
-        if (type == 'day') _playlistDay.addAll(paths);
-        if (type == 'night') _playlistNight.addAll(paths);
-      });
-      await _savePersistedData();
+    if (result.isNotEmpty) {
+      final List<String> newPaths = result.map((file) => file.path).toList();
+
+      final List<String> currentList;
+      if (type == 'general') {
+        currentList = List.from(_playlistGeneral)..addAll(newPaths);
+      } else if (type == 'day') {
+        currentList = List.from(_playlistDay)..addAll(newPaths);
+      } else {
+        currentList = List.from(_playlistNight)..addAll(newPaths);
+      }
+
+      final updatedPaths = await WallpaperManager.updatePlaylist(currentList, type: type);
+      if (updatedPaths != null) {
+        setState(() {
+          if (type == 'general') _playlistGeneral = updatedPaths;
+          if (type == 'day') _playlistDay = updatedPaths;
+          if (type == 'night') _playlistNight = updatedPaths;
+        });
+        await _savePersistedData();
+      }
     }
+  }
+
+  List<String> _getCombinedPlaylist() {
+    final all = <String>{..._playlistGeneral, ..._playlistDay, ..._playlistNight};
+    return all.toList();
   }
 
   Future<void> _applySettings() async {
     await _savePersistedData();
+    
+    if (_selectedEngine == 'carousel') {
+      if (_syncWithSystemTheme || _useDayNightMode) {
+        await WallpaperManager.updatePlaylist(_playlistDay, type: 'day');
+        await WallpaperManager.updatePlaylist(_playlistNight, type: 'night');
+      } else {
+        await WallpaperManager.updatePlaylist(_playlistGeneral, type: 'general');
+      }
+    }
     
     await WallpaperManager.updateSettings(
       changeOnVisible: false,
@@ -158,177 +286,617 @@ class _HomePageState extends State<HomePage> {
       dayStartHour: _dayStartHour,
       nightStartHour: _nightStartHour,
       isDimEnabled: _isDimEnabled,
+      dimIntensity: _dimIntensity,
       selectedEngine: _selectedEngine,
       isRandom: _isRandom,
       tetrisStyle: _tetrisStyle,
+      syncWithSystemTheme: _syncWithSystemTheme,
+      isParallaxEnabled: _isParallaxEnabled,
+      carouselChangeMode: _carouselChangeMode,
+      carouselChangeInterval: _carouselChangeInterval,
     );
 
-    bool success = true;
-    if (_selectedEngine == 'carousel') {
-      if (_useDayNightMode) {
-        final newDay = await WallpaperManager.updatePlaylist(_playlistDay, type: 'day');
-        final newNight = await WallpaperManager.updatePlaylist(_playlistNight, type: 'night');
-        if (newDay != null && newNight != null) {
-          setState(() {
-            _playlistDay = newDay;
-            _playlistNight = newNight;
-          });
-        } else {
-          success = false;
-        }
-      } else {
-        final newGeneral = await WallpaperManager.updatePlaylist(_playlistGeneral, type: 'general');
-        if (newGeneral != null) {
-          setState(() {
-            _playlistGeneral = newGeneral;
-          });
-        } else {
-          success = false;
-        }
-      }
-      if (success) {
-        await _savePersistedData();
-      }
-    }
-
-    if (success) {
-      await WallpaperManager.openWallpaperPicker();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Fondo aplicado correctamente'),
-          backgroundColor: Colors.deepPurpleAccent,
-        ),
-      );
-    }
+    await WallpaperManager.openWallpaperPicker();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(L10n.of(context).wallpaperApplied),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = L10n.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ixeken Live Wallpaper', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          _currentTab == 0
+              ? l.titleAdjust
+              : _currentTab == 1
+                  ? l.titleLibrary
+                  : l.titleOptions,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildEngineSelector(),
-            if (_selectedEngine == 'carousel') ...[
-              _buildSettingsSection(),
-              const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Divider()),
-              _useDayNightMode ? _buildDayNightPlaylists() : _buildGeneralPlaylist(),
-            ] else 
-              _buildEnginePreview(_selectedEngine),
-            const SizedBox(height: 120),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _applySettings,
-        label: const Text('ACTIVAR FONDO'),
-        icon: const Icon(Icons.wallpaper),
-        backgroundColor: Colors.deepPurpleAccent,
-      ),
-    );
-  }
-
-  Widget _buildEngineSelector() {
-    return Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: Card(
-        color: Colors.deepPurple.withOpacity(0.1),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedEngine,
-              isExpanded: true,
-              dropdownColor: Colors.black87,
-              items: _engines.entries.map((e) => DropdownMenuItem(
-                value: e.key,
-                child: Row(
-                  children: [
-                    Icon(_engineIcons[e.key] ?? Icons.auto_awesome, size: 20, color: Colors.deepPurpleAccent),
-                    const SizedBox(width: 12),
-                    Text(e.value, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )).toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() => _selectedEngine = val);
-                  _savePersistedData();
-                }
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEnginePreview(String engineId) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
+      body: IndexedStack(
+        index: _currentTab,
         children: [
-          AspectRatio(
-            aspectRatio: 9 / 16,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.deepPurple.withOpacity(0.2),
-                    blurRadius: 16,
-                    spreadRadius: 2,
-                  )
-                ],
-              ),
-              child: LiveWallpaperPreview(
-                engineId: engineId,
-                isDimEnabled: _isDimEnabled,
-                tetrisStyle: _tetrisStyle,
-              ),
+          _buildCustomizerTab(),
+          _buildGalleryTab(),
+          _buildSettingsTab(),
+        ],
+      ),
+      bottomNavigationBar: _buildFloatingNavigationBar(),
+    );
+  }
+
+  Widget _buildFloatingNavigationBar() {
+    final l = L10n.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SafeArea(
+      top: false,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500),
+          margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24, top: 8),
+          height: 72,
+          decoration: BoxDecoration(
+            color: isDark ? Colors.black.withOpacity(0.85) : Theme.of(context).cardColor.withOpacity(0.95),
+            borderRadius: BorderRadius.circular(36),
+            border: Border.all(
+              color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.08),
+              width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.5 : 0.1),
+                blurRadius: 16,
+                spreadRadius: 2,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          if (engineId == 'tetris') ...[
-            const SizedBox(height: 16),
-            const Text(
-              'Estilo Visual de Tetris',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.deepPurpleAccent),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(36),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildStyleChip('Neon Glow', 'neon'),
-                _buildStyleChip('Retro Gameboy', 'retro'),
-                _buildStyleChip('Pastel Minimal', 'pastel'),
-                _buildStyleChip('Cyberpunk Outline', 'outline'),
+                _buildNavItem(0, Icons.edit_note_outlined, l.tabAdjust),
+                _buildNavItem(1, Icons.collections_outlined, l.tabLibrary),
+                _buildNavItem(2, Icons.settings_outlined, l.tabOptions),
               ],
             ),
-          ],
-          const SizedBox(height: 20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final isSelected = _currentTab == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isSelected 
+        ? Theme.of(context).colorScheme.primary 
+        : (isDark ? Colors.white60 : Colors.black45);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() => _currentTab = index),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 4),
           Text(
-            _engineDescriptions[engineId] ?? '',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 15, color: Colors.white.withOpacity(0.7), height: 1.5),
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildCustomizerTab() {
+    final l = L10n.of(context);
+    final engines = getEngines(context);
+    final engineDescs = getEngineDescriptions(context);
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            Center(
+              child: Container(
+                width: 200,
+                height: 350,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                      blurRadius: 16,
+                      spreadRadius: 2,
+                    )
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: LiveWallpaperPreview(
+                    engineId: _selectedEngine,
+                    isDimEnabled: _isDimEnabled,
+                    dimIntensity: _dimIntensity,
+                    tetrisStyle: _tetrisStyle,
+                    playlist: _getCombinedPlaylist(),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l.activeWallpaper(engines[_selectedEngine] ?? _selectedEngine),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              engineDescs[_selectedEngine] ?? l.descCarousel,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12, 
+                color: Theme.of(context).brightness == Brightness.dark 
+                    ? Colors.white70 
+                    : Colors.black54,
+              ),
+            ),
+            const Divider(height: 32),
+            if (_selectedEngine == 'carousel') ...[
+              _buildCarouselControls(),
+            ] else if (_selectedEngine == 'tetris') ...[
+              _buildTetrisControls(),
+            ] else ...[
+              _buildGenericControls(),
+            ],
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _applySettings,
+                label: Text(l.btnApplySystem),
+                icon: const Icon(Icons.wallpaper),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final bool success = await WallpaperManager.clearWallpaper();
+                  if (success && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l.wallpaperRestored),
+                        backgroundColor: Colors.blueAccent,
+                      ),
+                    );
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l.wallpaperRestoreError),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                  }
+                },
+                label: Text(l.btnRestoreDefault),
+                icon: const Icon(Icons.delete_forever_outlined),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: const BorderSide(color: Colors.redAccent),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 120),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCarouselControls() {
+    final l = L10n.of(context);
+    return Column(
+      children: [
+        if (_syncWithSystemTheme) ...[
+          _buildPlaylistEditor('day', l.carouselDayLight),
+          const SizedBox(height: 12),
+          _buildPlaylistEditor('night', l.carouselNightDark),
+        ] else if (_useDayNightMode) ...[
+          _buildPlaylistEditor('day', l.carouselDay),
+          const SizedBox(height: 12),
+          _buildPlaylistEditor('night', l.carouselNight),
+        ] else ...[
+          _buildPlaylistEditor('general', l.carouselGeneral),
+        ],
+        const Divider(indent: 16, endIndent: 16),
+        SwitchListTile(
+          title: Text(l.optDim),
+          subtitle: Text(l.optDimSub),
+          value: _isDimEnabled,
+          onChanged: (val) {
+            setState(() => _isDimEnabled = val);
+            _savePersistedData();
+          },
+        ),
+        if (_isDimEnabled) ...[
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.brightness_medium_outlined, 
+                  size: 16, 
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.black45,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Slider(
+                    value: _dimIntensity,
+                    min: 0.1,
+                    max: 0.9,
+                    divisions: 16,
+                    label: '${(_dimIntensity * 100).round()}%',
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    onChanged: (val) {
+                      setState(() => _dimIntensity = val);
+                    },
+                    onChangeEnd: (val) async {
+                      await _savePersistedData();
+                    },
+                  ),
+                ),
+                Text(
+                  '${(_dimIntensity * 100).round()}%', 
+                  style: TextStyle(
+                    fontSize: 12, 
+                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const Divider(indent: 16, endIndent: 16),
+        SwitchListTile(
+          title: Text(l.optParallax),
+          subtitle: Text(l.optParallaxSub),
+          value: _isParallaxEnabled,
+          activeColor: Theme.of(context).colorScheme.primary,
+          onChanged: (val) {
+            setState(() => _isParallaxEnabled = val);
+            _savePersistedData();
+          },
+        ),
+        const Divider(indent: 16, endIndent: 16),
+        SwitchListTile(
+          title: Text(l.optRandom),
+          subtitle: Text(l.optRandomSub),
+          value: _isRandom,
+          activeColor: Theme.of(context).colorScheme.primary,
+          onChanged: (val) {
+            setState(() => _isRandom = val);
+            _savePersistedData();
+          },
+        ),
+        const Divider(indent: 16, endIndent: 16),
+        SwitchListTile(
+          title: Text(l.optSyncTheme),
+          subtitle: Text(l.optSyncThemeSub),
+          value: _syncWithSystemTheme,
+          activeColor: Theme.of(context).colorScheme.primary,
+          onChanged: (val) {
+            setState(() {
+              _syncWithSystemTheme = val;
+              if (val) _useDayNightMode = false;
+            });
+            _savePersistedData();
+          },
+        ),
+        if (!_syncWithSystemTheme) ...[
+          const Divider(indent: 16, endIndent: 16),
+          SwitchListTile(
+            title: Text(l.optDayNight),
+            subtitle: Text(l.optDayNightSub),
+            value: _useDayNightMode,
+            activeColor: Theme.of(context).colorScheme.primary,
+            onChanged: (val) {
+              setState(() => _useDayNightMode = val);
+              _savePersistedData();
+            },
+          ),
+          if (_useDayNightMode) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ActionChip(
+                      avatar: const Icon(Icons.wb_sunny_outlined, size: 16),
+                      label: Text('${l.dayLabel}: $_dayStartHour:00'),
+                      onPressed: () async {
+                        final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: _dayStartHour, minute: 0));
+                        if (time != null) {
+                          setState(() => _dayStartHour = time.hour);
+                          _savePersistedData();
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ActionChip(
+                      avatar: const Icon(Icons.nightlight_outlined, size: 16),
+                      label: Text('${l.nightLabel}: $_nightStartHour:00'),
+                      onPressed: () async {
+                        final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: _nightStartHour, minute: 0));
+                        if (time != null) {
+                          setState(() => _nightStartHour = time.hour);
+                          _savePersistedData();
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+        const Divider(indent: 16, endIndent: 16),
+        ListTile(
+          title: Text(l.optChangeCondition),
+          subtitle: Text(_carouselChangeMode == 'on_visibility' 
+              ? l.changeOnLock 
+              : l.changeOnTime),
+          trailing: DropdownButton<String>(
+            value: _carouselChangeMode,
+            onChanged: (val) async {
+              if (val != null) {
+                setState(() => _carouselChangeMode = val);
+                await _savePersistedData();
+                await WallpaperManager.updateSettings(
+                  changeOnVisible: false,
+                  useDayNightMode: _useDayNightMode,
+                  dayStartHour: _dayStartHour,
+                  nightStartHour: _nightStartHour,
+                  isDimEnabled: _isDimEnabled,
+                  dimIntensity: _dimIntensity,
+                  selectedEngine: _selectedEngine,
+                  isRandom: _isRandom,
+                  tetrisStyle: _tetrisStyle,
+                  syncWithSystemTheme: _syncWithSystemTheme,
+                  isParallaxEnabled: _isParallaxEnabled,
+                  carouselChangeMode: _carouselChangeMode,
+                  carouselChangeInterval: _carouselChangeInterval,
+                );
+              }
+            },
+            items: [
+              DropdownMenuItem(
+                value: 'on_visibility',
+                child: Text(l.changeOnLock),
+              ),
+              DropdownMenuItem(
+                value: 'timer',
+                child: Text(l.changeOnTime),
+              ),
+            ],
+          ),
+        ),
+        if (_carouselChangeMode == 'timer') ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(l.optChangeInterval, style: const TextStyle(fontSize: 14)),
+                DropdownButton<int>(
+                  value: _carouselChangeInterval,
+                  onChanged: (val) async {
+                    if (val != null) {
+                      setState(() => _carouselChangeInterval = val);
+                      await _savePersistedData();
+                      await WallpaperManager.updateSettings(
+                        changeOnVisible: false,
+                        useDayNightMode: _useDayNightMode,
+                        dayStartHour: _dayStartHour,
+                        nightStartHour: _nightStartHour,
+                        isDimEnabled: _isDimEnabled,
+                        dimIntensity: _dimIntensity,
+                        selectedEngine: _selectedEngine,
+                        isRandom: _isRandom,
+                        tetrisStyle: _tetrisStyle,
+                        syncWithSystemTheme: _syncWithSystemTheme,
+                        isParallaxEnabled: _isParallaxEnabled,
+                        carouselChangeMode: _carouselChangeMode,
+                        carouselChangeInterval: _carouselChangeInterval,
+                      );
+                    }
+                  },
+                  items: [
+                    DropdownMenuItem(value: 15, child: Text(l.formatSeconds(15))),
+                    DropdownMenuItem(value: 30, child: Text(l.formatSeconds(30))),
+                    DropdownMenuItem(value: 60, child: Text(l.formatMinute)),
+                    DropdownMenuItem(value: 300, child: Text(l.formatMinutes(5))),
+                    DropdownMenuItem(value: 900, child: Text(l.formatMinutes(15))),
+                    DropdownMenuItem(value: 1800, child: Text(l.formatMinutes(30))),
+                    DropdownMenuItem(value: 3600, child: Text(l.formatHour)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTetrisControls() {
+    final l = L10n.of(context);
+    return Column(
+      children: [
+        SwitchListTile(
+          title: Text(l.optDim),
+          subtitle: Text(l.optDimSub),
+          value: _isDimEnabled,
+          onChanged: (val) {
+            setState(() => _isDimEnabled = val);
+            _savePersistedData();
+          },
+        ),
+        if (_isDimEnabled) ...[
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.brightness_medium_outlined, size: 16, color: Colors.white60),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Slider(
+                    value: _dimIntensity,
+                    min: 0.1,
+                    max: 0.9,
+                    divisions: 16,
+                    label: '${(_dimIntensity * 100).round()}%',
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    onChanged: (val) {
+                      setState(() => _dimIntensity = val);
+                    },
+                    onChangeEnd: (val) async {
+                      await _savePersistedData();
+                    },
+                  ),
+                ),
+                Text(
+                  '${(_dimIntensity * 100).round()}%', 
+                  style: TextStyle(
+                    fontSize: 12, 
+                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const Divider(indent: 16, endIndent: 16),
+        const SizedBox(height: 8),
+        Text(
+          l.tetrisStyle,
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).colorScheme.primary),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            _buildStyleChip('Neon Glow', 'neon'),
+            _buildStyleChip('Retro Gameboy', 'retro'),
+            _buildStyleChip('Pastel Minimal', 'pastel'),
+            _buildStyleChip('Cyberpunk Outline', 'outline'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGenericControls() {
+    final l = L10n.of(context);
+    return Column(
+      children: [
+        SwitchListTile(
+          title: Text(l.optDim),
+          subtitle: Text(l.optDimSub),
+          value: _isDimEnabled,
+          onChanged: (val) {
+            setState(() => _isDimEnabled = val);
+            _savePersistedData();
+          },
+        ),
+        if (_isDimEnabled) ...[
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.brightness_medium_outlined, size: 16, color: Colors.white60),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Slider(
+                    value: _dimIntensity,
+                    min: 0.1,
+                    max: 0.9,
+                    divisions: 16,
+                    label: '${(_dimIntensity * 100).round()}%',
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    onChanged: (val) {
+                      setState(() => _dimIntensity = val);
+                    },
+                    onChangeEnd: (val) async {
+                      await _savePersistedData();
+                    },
+                  ),
+                ),
+                Text(
+                  '${(_dimIntensity * 100).round()}%', 
+                  style: TextStyle(
+                    fontSize: 12, 
+                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (_selectedEngine == 'particles') ...[
+          const Divider(indent: 16, endIndent: 16),
+          SwitchListTile(
+            title: Text(l.optParallax),
+            subtitle: Text(l.optParallaxSub),
+            value: _isParallaxEnabled,
+            activeColor: Theme.of(context).colorScheme.primary,
+            onChanged: (val) {
+              setState(() => _isParallaxEnabled = val);
+              _savePersistedData();
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildStyleChip(String label, String value) {
     final isSelected = _tetrisStyle == value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
-      selectedColor: Colors.deepPurple.withOpacity(0.3),
+      selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
       labelStyle: TextStyle(
-        color: isSelected ? Colors.deepPurpleAccent : Colors.white70,
+        color: isSelected 
+            ? Theme.of(context).colorScheme.primary 
+            : (isDark ? Colors.white70 : Colors.black87),
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
       onSelected: (val) {
@@ -340,187 +908,976 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildSettingsSection() {
-    return Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: Card(
-        elevation: 0,
-        color: Colors.white.withOpacity(0.05),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Column(
-          children: [
-            SwitchListTile(
-              title: const Text('Modo Inteligente (Día/Noche)'),
-              subtitle: const Text('Cambia la galería según la hora'),
-              value: _useDayNightMode,
-              activeColor: Colors.amber,
-              onChanged: (val) {
-                setState(() => _useDayNightMode = val);
-                _savePersistedData();
-              },
+  Widget _buildGalleryTab() {
+    final l = L10n.of(context);
+    final enginesMap = getEngines(context);
+    final filteredEngines = enginesMap.entries.where((e) {
+      final name = e.value.toLowerCase();
+      return name.contains(_searchQuery.toLowerCase());
+    }).toList();
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final hintColor = isDark ? Colors.white.withOpacity(0.5) : Colors.black54;
+    final iconColor = isDark ? Colors.white.withOpacity(0.5) : Colors.black54;
+    final clearIconColor = isDark ? Colors.white60 : Colors.black54;
+    final fillColor = isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: TextField(
+            style: TextStyle(color: textColor),
+            decoration: InputDecoration(
+              hintText: l.searchHint,
+              hintStyle: TextStyle(color: hintColor),
+              prefixIcon: Icon(Icons.search, color: iconColor),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear, color: clearIconColor),
+                      onPressed: () => setState(() => _searchQuery = ''),
+                    )
+                  : null,
+              filled: true,
+              fillColor: fillColor,
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30),
+                borderSide: BorderSide.none,
+              ),
             ),
-            if (_useDayNightMode) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ActionChip(
-                        avatar: const Icon(Icons.wb_sunny_outlined, size: 16),
-                        label: Text('Día: ${_dayStartHour}:00'),
-                        onPressed: () async {
-                          final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: _dayStartHour, minute: 0));
-                          if (time != null) {
-                            setState(() => _dayStartHour = time.hour);
-                            _savePersistedData();
-                          }
-                        },
+            onChanged: (val) {
+              setState(() => _searchQuery = val);
+            },
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (filteredEngines.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        l.headerWallpapers, 
+                        style: TextStyle(
+                          fontSize: 16, 
+                          fontWeight: FontWeight.bold, 
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: MediaQuery.of(context).size.width > 600
+                            ? (MediaQuery.of(context).size.width / 220).floor()
+                            : 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 0.58,
+                      ),
+                      itemCount: filteredEngines.length,
+                      itemBuilder: (context, index) {
+                        final entry = filteredEngines[index];
+                        return _buildEngineCard(entry.key, entry.value);
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 120),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEngineCard(String engineId, String title) {
+    final l = L10n.of(context);
+    final engineDescs = getEngineDescriptions(context);
+    final description = engineDescs[engineId] ?? '';
+    final isActive = _selectedEngine == engineId;
+    return Card(
+      color: Colors.white.withOpacity(0.04),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16), 
+        side: BorderSide(
+          color: isActive 
+              ? Theme.of(context).colorScheme.primary 
+              : (Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.white.withOpacity(0.05) 
+                  : Colors.black.withOpacity(0.05)), 
+          width: 2,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: LiveWallpaperPreview(
+              engineId: engineId,
+              isDimEnabled: false,
+              dimIntensity: 0.43,
+              tetrisStyle: _tetrisStyle,
+              playlist: _getCombinedPlaylist(),
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.0),
+                    Colors.black.withOpacity(0.25),
+                    Colors.black.withOpacity(0.85),
+                  ],
+                  stops: const [0.0, 0.55, 1.0],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  title, 
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white), 
+                  maxLines: 1, 
+                  overflow: TextOverflow.ellipsis
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description.substring(0, math.min(35, description.length)),
+                  style: const TextStyle(color: Colors.white70, fontSize: 9),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
                     Expanded(
-                      child: ActionChip(
-                        avatar: const Icon(Icons.nightlight_outlined, size: 16),
-                        label: Text('Noche: ${_nightStartHour}:00'),
+                      child: OutlinedButton(
                         onPressed: () async {
-                          final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: _nightStartHour, minute: 0));
-                          if (time != null) {
-                            setState(() => _nightStartHour = time.hour);
-                            _savePersistedData();
-                          }
+                          setState(() {
+                            _selectedEngine = engineId;
+                          });
+                          await _savePersistedData();
+                          await WallpaperManager.updateSettings(
+                            changeOnVisible: false,
+                            useDayNightMode: _useDayNightMode,
+                            dayStartHour: _dayStartHour,
+                            nightStartHour: _nightStartHour,
+                            isDimEnabled: _isDimEnabled,
+                            dimIntensity: _dimIntensity,
+                            selectedEngine: _selectedEngine,
+                            isRandom: _isRandom,
+                            tetrisStyle: _tetrisStyle,
+                            syncWithSystemTheme: _syncWithSystemTheme,
+                            isParallaxEnabled: _isParallaxEnabled,
+                            carouselChangeMode: _carouselChangeMode,
+                            carouselChangeInterval: _carouselChangeInterval,
+                          );
+                          await WallpaperManager.openWallpaperPicker();
                         },
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: isActive 
+                                ? Theme.of(context).colorScheme.primary 
+                                : (Theme.of(context).brightness == Brightness.dark ? Colors.white24 : Colors.black26),
+                          ),
+                          backgroundColor: isActive 
+                              ? Theme.of(context).colorScheme.primary.withOpacity(0.2) 
+                              : (Theme.of(context).brightness == Brightness.dark ? Colors.black45 : Colors.white.withOpacity(0.7)),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text(
+                          isActive ? l.active : l.activate, 
+                          style: TextStyle(
+                            fontSize: 11, 
+                            color: isActive 
+                                ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).colorScheme.primary) 
+                                : (Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black87),
+                            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _removeFileFromPlaylist(String type, String path) async {
+    final List<String> currentList;
+    if (type == 'general') {
+      currentList = List.from(_playlistGeneral)..remove(path);
+    } else if (type == 'day') {
+      currentList = List.from(_playlistDay)..remove(path);
+    } else {
+      currentList = List.from(_playlistNight)..remove(path);
+    }
+
+    final updatedPaths = await WallpaperManager.updatePlaylist(currentList, type: type);
+    setState(() {
+      if (type == 'general') _playlistGeneral = updatedPaths ?? currentList;
+      if (type == 'day') _playlistDay = updatedPaths ?? currentList;
+      if (type == 'night') _playlistNight = updatedPaths ?? currentList;
+    });
+    await _savePersistedData();
+
+    if (_selectedEngine == 'carousel') {
+      await WallpaperManager.updateSettings(
+        changeOnVisible: false,
+        useDayNightMode: _useDayNightMode,
+        dayStartHour: _dayStartHour,
+        nightStartHour: _nightStartHour,
+        isDimEnabled: _isDimEnabled,
+        dimIntensity: _dimIntensity,
+        selectedEngine: _selectedEngine,
+        isRandom: _isRandom,
+        tetrisStyle: _tetrisStyle,
+        syncWithSystemTheme: _syncWithSystemTheme,
+        isParallaxEnabled: _isParallaxEnabled,
+        carouselChangeMode: _carouselChangeMode,
+        carouselChangeInterval: _carouselChangeInterval,
+      );
+    }
+  }
+
+  Widget _buildPlaylistEditor(String type, String title) {
+    final List<String> playlist;
+    if (type == 'general') {
+      playlist = _playlistGeneral;
+    } else if (type == 'day') {
+      playlist = _playlistDay;
+    } else {
+      playlist = _playlistNight;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold, 
+              fontSize: 13, 
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 145,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: playlist.length + 1,
+            itemBuilder: (context, index) {
+              if (index == playlist.length) {
+                return Container(
+                  width: 85,
+                  margin: const EdgeInsets.only(right: 8, bottom: 8),
+                  child: Card(
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.white.withOpacity(0.02) 
+                        : Theme.of(context).cardColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: Theme.of(context).brightness == Brightness.dark 
+                            ? Colors.white.withOpacity(0.08) 
+                            : Colors.black.withOpacity(0.08),
+                      ),
+                    ),
+                    child: InkWell(
+                      onTap: () => _pickFiles(type),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate_outlined, size: 24, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(height: 4),
+                          Text(
+                            L10n.of(context).add, 
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold, 
+                              fontSize: 11, 
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              final path = playlist[index];
+              final isVideo = path.endsWith('.mp4') || path.endsWith('.mkv');
+              final filename = path.split('/').last;
+
+              return Container(
+                width: 85,
+                margin: const EdgeInsets.only(right: 8, bottom: 8),
+                child: Card(
+                  color: Colors.white.withOpacity(0.04),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.white.withOpacity(0.05)),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Image.file(
+                          File(path),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.black26,
+                              child: Center(
+                                child: Icon(
+                                  isVideo ? Icons.videocam : Icons.image_not_supported_outlined,
+                                  color: Colors.white30,
+                                  size: 24,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      if (isVideo)
+                        const Positioned(
+                          top: 4,
+                          left: 4,
+                          child: Icon(Icons.videocam, size: 14, color: Colors.white70),
+                        ),
+                      Positioned(
+                        top: 2,
+                        right: 2,
+                        child: GestureDetector(
+                          onTap: () => _removeFileFromPlaylist(type, path),
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(2),
+                            child: const Icon(Icons.close, size: 14, color: Colors.redAccent),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 4,
+                        right: 4,
+                        bottom: 4,
+                        child: Container(
+                          color: Colors.black54,
+                          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                          child: Text(
+                            filename,
+                            style: const TextStyle(fontSize: 8, color: Colors.white),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsTab() {
+    final l = L10n.of(context);
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l.preferences, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+            const SizedBox(height: 8),
+            Card(
+              color: Theme.of(context).cardColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.palette_outlined, color: Theme.of(context).colorScheme.primary),
+                    title: Text(l.appTheme),
+                    subtitle: Text(
+                      _appThemeMode == 'system'
+                          ? l.themeSyncSystem
+                          : _appThemeMode == 'light'
+                              ? l.themeLight
+                              : l.themeDark,
+                    ),
+                    trailing: DropdownButton<String>(
+                      value: _appThemeMode,
+                      underline: const SizedBox(),
+                      icon: Icon(Icons.arrow_drop_down, color: Theme.of(context).colorScheme.primary),
+                      borderRadius: BorderRadius.circular(12),
+                      dropdownColor: Theme.of(context).cardColor,
+                      onChanged: (val) async {
+                        if (val != null) {
+                          setState(() {
+                            _appThemeMode = val;
+                          });
+                          if (val == 'light') {
+                            themeModeNotifier.value = ThemeMode.light;
+                          } else if (val == 'dark') {
+                            themeModeNotifier.value = ThemeMode.dark;
+                          } else {
+                            themeModeNotifier.value = ThemeMode.system;
+                          }
+                          await _savePersistedData();
+                        }
+                      },
+                      items: [
+                        DropdownMenuItem(
+                          value: 'system',
+                          child: Text(l.themeOptSystem),
+                        ),
+                        DropdownMenuItem(
+                          value: 'light',
+                          child: Text(l.themeOptLight),
+                        ),
+                        DropdownMenuItem(
+                          value: 'dark',
+                          child: Text(l.themeOptDark),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-            ],
-            const Divider(indent: 16, endIndent: 16),
-            SwitchListTile(
-              title: const Text('Oscurecer fondo (Dim)'),
-              subtitle: const Text('Para resaltar los iconos del sistema'),
-              value: _isDimEnabled,
-              onChanged: (val) {
-                setState(() => _isDimEnabled = val);
-                _savePersistedData();
-              },
             ),
-            const Divider(indent: 16, endIndent: 16),
-            SwitchListTile(
-              title: const Text('Orden aleatorio (Random)'),
-              subtitle: const Text('Muestra las imágenes sin un orden fijo'),
-              value: _isRandom,
-              activeColor: Colors.deepPurpleAccent,
-              onChanged: (val) {
-                setState(() => _isRandom = val);
-                _savePersistedData();
-              },
+            const SizedBox(height: 16),
+            Text(l.sysPermissions, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+            const SizedBox(height: 8),
+            Card(
+              color: Theme.of(context).cardColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withOpacity(0.08)
+                        : Colors.black.withOpacity(0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.shield_outlined,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                title: Text(l.managePermissions),
+                subtitle: Text(l.configPermissionsSub),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white54
+                      : Colors.black45,
+                ),
+                onTap: () => _showPermissionsBottomSheet(context),
+              ),
             ),
+            const SizedBox(height: 16),
+            Text(l.aboutApp, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+            const SizedBox(height: 8),
+            Card(
+              color: Theme.of(context).cardColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.code, color: Theme.of(context).colorScheme.primary),
+                    title: Text(l.sourceCode),
+                    subtitle: Text(l.sourceCodeSub),
+                    onTap: () => WallpaperManager.launchUrl('https://github.com/Ixeken-Studios/Ixeken-Live-Wallpaper'),
+                  ),
+                  Divider(height: 1, color: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : Colors.black12),
+                  ListTile(
+                    leading: Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
+                    title: Text(l.developedBy),
+                    subtitle: const Text('Ixeken Studios'),
+                  ),
+                  Divider(height: 1, color: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : Colors.black12),
+                  ListTile(
+                    leading: Icon(Icons.privacy_tip_outlined, color: Theme.of(context).colorScheme.primary),
+                    title: Text(l.privacyPolicy),
+                    subtitle: Text(l.readPrivacy),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text(l.privacyPolicy),
+                          content: SingleChildScrollView(
+                            child: Text(
+                              l.privacyContent,
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(l.understood),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 120),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildGeneralPlaylist() {
-    return _buildMediaList('Mi Galería', _playlistGeneral, () => _pickFiles('general'), (idx) {
-      setState(() => _playlistGeneral.removeAt(idx));
-      _savePersistedData();
-    });
-  }
+  void _showPermissionsBottomSheet(BuildContext context) {
+    bool photosGranted = false;
+    bool batteryIgnored = false;
+    bool isSensorsExpanded = false;
+    bool isStabilityExpanded = false;
 
-  Widget _buildDayNightPlaylists() {
-    return Column(
-      children: [
-        _buildMediaList('Galería Día ☀️', _playlistDay, () => _pickFiles('day'), (idx) {
-          setState(() => _playlistDay.removeAt(idx));
-          _savePersistedData();
-        }),
-        const Padding(padding: EdgeInsets.symmetric(horizontal: 32), child: Divider()),
-        _buildMediaList('Galería Noche 🌙', _playlistNight, () => _pickFiles('night'), (idx) {
-          setState(() => _playlistNight.removeAt(idx));
-          _savePersistedData();
-        }),
-      ],
-    );
-  }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final l = L10n.of(context);
+            Future<void> checkPermissions() async {
+              final photos = await Permission.photos.isGranted;
+              final battery = await Permission.ignoreBatteryOptimizations.isGranted;
+              setSheetState(() {
+                photosGranted = photos;
+                batteryIgnored = battery;
+              });
+            }
 
-  Widget _buildMediaList(String title, List<String> list, VoidCallback onAdd, Function(int) onDelete) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
-              Row(
-                children: [
-                  if (list.isNotEmpty)
-                    TextButton.icon(
-                      onPressed: () {
-                        setState(() => list.clear());
-                        _savePersistedData();
-                      },
-                      icon: const Icon(Icons.delete_sweep, size: 18, color: Colors.redAccent),
-                      label: const Text('Limpiar', style: TextStyle(color: Colors.redAccent)),
-                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              final photos = await Permission.photos.isGranted;
+              final battery = await Permission.ignoreBatteryOptimizations.isGranted;
+              if (photos != photosGranted || battery != batteryIgnored) {
+                setSheetState(() {
+                  photosGranted = photos;
+                  batteryIgnored = battery;
+                });
+              }
+            });
+
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final cardColor = Theme.of(context).cardColor;
+            final primaryColor = Theme.of(context).colorScheme.primary;
+
+            return Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: 600,
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                ),
+                child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(top: 12, bottom: 20),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white24 : Colors.black26,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    onPressed: onAdd, 
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Añadir'),
-                    style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        if (list.isEmpty)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                children: [
-                  Icon(Icons.collections_outlined, size: 48, color: Colors.white.withOpacity(0.2)),
-                  const SizedBox(height: 8),
-                  Text('Añade fotos o videos aquí', style: TextStyle(color: Colors.white.withOpacity(0.4))),
-                ],
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.shield_outlined,
+                        size: 36,
+                        color: primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      l.permManageTitle,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        l.permManageDesc,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Colors.white60 : Colors.black54,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Card(
+                        color: cardColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.storage, color: primaryColor),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l.permGallery,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      l.permGallerySub,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isDark ? Colors.white60 : Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              photosGranted
+                                  ? Icon(Icons.check_circle, color: primaryColor, size: 28)
+                                  : ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: primaryColor,
+                                        foregroundColor: isDark ? Colors.black : Colors.white,
+                                        shape: const StadiumBorder(),
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        elevation: 0,
+                                      ),
+                                      onPressed: () async {
+                                        final status = await Permission.photos.request();
+                                        if (status.isPermanentlyDenied) {
+                                          openAppSettings();
+                                        }
+                                        await checkPermissions();
+                                      },
+                                      child: Text(
+                                        l.allow,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                      ),
+                                    ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Card(
+                        color: cardColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.palette_outlined, color: primaryColor),
+                              ),
+                              title: Text(
+                                l.permOptionalService,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                              subtitle: Text(
+                                l.permOptionalSub,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.white60 : Colors.black54,
+                                ),
+                              ),
+                              trailing: Icon(
+                                isSensorsExpanded ? Icons.expand_less : Icons.expand_more,
+                                color: isDark ? Colors.white70 : Colors.black54,
+                              ),
+                              onTap: () {
+                                setSheetState(() {
+                                  isSensorsExpanded = !isSensorsExpanded;
+                                });
+                              },
+                            ),
+                            if (isSensorsExpanded)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16, top: 4),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.black26 : Colors.white.withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.03),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(Icons.sensors, color: primaryColor, size: 20),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              l.permParallax,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                color: isDark ? Colors.white : Colors.black87,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              l.permParallaxSub,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: isDark ? Colors.white54 : Colors.black45,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(Icons.check_circle, color: primaryColor, size: 24),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Card(
+                        color: cardColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.bolt, color: primaryColor),
+                              ),
+                              title: Text(
+                                l.permStability,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                              subtitle: Text(
+                                l.permStabilitySub,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.white60 : Colors.black54,
+                                ),
+                              ),
+                              trailing: Icon(
+                                isStabilityExpanded ? Icons.expand_less : Icons.expand_more,
+                                color: isDark ? Colors.white70 : Colors.black54,
+                              ),
+                              onTap: () {
+                                setSheetState(() {
+                                  isStabilityExpanded = !isStabilityExpanded;
+                                });
+                              },
+                            ),
+                            if (isStabilityExpanded)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16, top: 4),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? Colors.black26 : Colors.white.withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 36,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.03),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(Icons.battery_alert, color: primaryColor, size: 20),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              l.permBattery,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                color: isDark ? Colors.white : Colors.black87,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              l.permBatterySub,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: isDark ? Colors.white54 : Colors.black45,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      batteryIgnored
+                                          ? Icon(Icons.check_circle, color: primaryColor, size: 24)
+                                          : ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: primaryColor,
+                                                foregroundColor: isDark ? Colors.black : Colors.white,
+                                                shape: const StadiumBorder(),
+                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                elevation: 0,
+                                              ),
+                                              onPressed: () async {
+                                                final status = await Permission.ignoreBatteryOptimizations.request();
+                                                if (status.isPermanentlyDenied) {
+                                                  openAppSettings();
+                                                }
+                                                await checkPermissions();
+                                              },
+                                              child: Text(
+                                                l.ignore,
+                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+                                              ),
+                                            ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 32, indent: 16, endIndent: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: TextButton.icon(
+                        onPressed: () => openAppSettings(),
+                        icon: const Icon(Icons.settings_applications, color: Colors.redAccent),
+                        label: Text(
+                          l.revokeSettings,
+                          style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
-          )
-        else
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: list.length,
-            itemBuilder: (context, index) {
-              final path = list[index];
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(File(path), width: 50, height: 50, fit: BoxFit.cover, 
-                      errorBuilder: (_, __, ___) => const Icon(Icons.movie, color: Colors.blueGrey)),
-                  ),
-                  title: Text(path.split('/').last, maxLines: 1, style: const TextStyle(fontSize: 14)),
-                  trailing: IconButton(icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20), 
-                    onPressed: () => onDelete(index)),
-                ),
-              );
-            },
-          ),
-      ],
+          );
+          },
+        );
+      },
     );
   }
 }
@@ -528,13 +1885,17 @@ class _HomePageState extends State<HomePage> {
 class LiveWallpaperPreview extends StatefulWidget {
   final String engineId;
   final bool isDimEnabled;
+  final double dimIntensity;
   final String tetrisStyle;
+  final List<String>? playlist;
   
   const LiveWallpaperPreview({
     super.key, 
     required this.engineId, 
     required this.isDimEnabled,
+    required this.dimIntensity,
     required this.tetrisStyle,
+    this.playlist,
   });
 
   @override
@@ -1032,39 +2393,77 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
               painter = FluidSwarmPainter(_fluidParticles);
               break;
             default:
-              return Stack(
-                alignment: Alignment.center,
-                fit: StackFit.expand,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Colors.deepPurple.shade900, Colors.black],
+              final playlist = widget.playlist;
+              if (playlist == null || playlist.isEmpty) {
+                return Stack(
+                  alignment: Alignment.center,
+                  fit: StackFit.expand,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                            Theme.of(context).colorScheme.surface,
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  Opacity(
-                    opacity: 0.08,
-                    child: GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 10),
-                      itemBuilder: (_, __) => const Center(child: Text('.', style: TextStyle(color: Colors.white))),
-                    ),
-                  ),
-                  const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.photo_library_outlined, size: 64, color: Colors.white54),
-                      SizedBox(height: 16),
-                      Text(
-                        'Vista Previa del Carrusel',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white70),
+                    Opacity(
+                      opacity: 0.08,
+                      child: GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 10),
+                        itemBuilder: (_, __) => const Center(child: Text('.', style: TextStyle(color: Colors.white))),
                       ),
+                    ),
+                    const Center(
+                      child: Icon(Icons.photo_library_outlined, size: 48, color: Colors.white54),
+                    ),
+                  ],
+                );
+              }
+              
+              final index = ((_controller.value * playlist.length).toInt()) % playlist.length;
+              final currentPath = playlist[index];
+              
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 800),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                  return Stack(
+                    fit: StackFit.expand,
+                    alignment: Alignment.center,
+                    children: <Widget>[
+                      ...previousChildren,
+                      if (currentChild != null) currentChild,
                     ],
-                  ),
-                ],
+                  );
+                },
+                child: Image.file(
+                  File(currentPath),
+                  key: ValueKey<String>(currentPath),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    final isVideo = currentPath.toLowerCase().endsWith('.mp4') ||
+                                    currentPath.toLowerCase().endsWith('.mov') ||
+                                    currentPath.toLowerCase().endsWith('.mkv');
+                    return Container(
+                      key: ValueKey<String>('error_$currentPath'),
+                      color: Theme.of(context).colorScheme.surface,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        isVideo ? Icons.video_collection_outlined : Icons.broken_image_outlined,
+                        size: 48,
+                        color: Colors.white54,
+                      ),
+                    );
+                  },
+                ),
               );
           }
           
@@ -1080,7 +2479,7 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
               children: [
                 CustomPaint(painter: painter),
                 if (widget.isDimEnabled)
-                  Container(color: Colors.black.withOpacity(0.43)),
+                  Container(color: Colors.black.withOpacity(widget.dimIntensity)),
               ],
             ),
           );
@@ -1492,6 +2891,8 @@ class VaporwavePainter extends CustomPainter {
   void paint(ui.Canvas canvas, ui.Size size) {
     final w = size.width;
     final h = size.height;
+    if (w == 0 || h == 0) return;
+    
     final horizon = h * 0.48;
     
     // Sky
@@ -1500,6 +2901,7 @@ class VaporwavePainter extends CustomPainter {
         Offset.zero,
         Offset(0, horizon),
         [const Color(0xFF1D0030), const Color(0xFFA80077), const Color(0xFFFF5E62)],
+        [0.0, 0.5, 1.0],
       );
     canvas.drawRect(ui.Rect.fromLTWH(0, 0, w, horizon), skyPaint);
     

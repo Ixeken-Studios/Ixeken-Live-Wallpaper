@@ -16,6 +16,7 @@ class PlexusWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
     private val particles = mutableListOf<Node>()
     private val numNodes = 50
     private val connectionDistance = 250f
+    private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
     
     private val frameCallback = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
@@ -94,12 +95,23 @@ class PlexusWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
         for (n in particles) {
             canvas.drawCircle(n.x, n.y, 4f, paint)
         }
+
+        val isDim = prefs.getBoolean("isDimEnabled", false)
+        if (isDim) {
+            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
+            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
+            canvas.drawColor(Color.argb(alpha, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_OVER)
+        }
     }
 
     private fun drawFrame() {
         val holder = currentHolder ?: return
-        val canvas = if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        if (canvas == null) return
+        if (!holder.surface.isValid) return
+        val canvas = try {
+            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
+        } catch (e: Exception) {
+            try { holder.lockCanvas() } catch (ex: Exception) { null }
+        } ?: return
         try {
             onDraw(canvas)
         } finally {

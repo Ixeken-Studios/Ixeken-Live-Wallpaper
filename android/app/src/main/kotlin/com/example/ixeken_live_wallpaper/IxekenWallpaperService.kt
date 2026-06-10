@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
 import com.example.ixeken_live_wallpaper.engines.*
@@ -15,8 +16,28 @@ class IxekenWallpaperService : WallpaperService() {
         const val ACTION_SETTINGS_CHANGED = "com.ixeken.wallpaper.SETTINGS_CHANGED"
     }
 
+    private val activeHosts = mutableListOf<IxekenEngineHost>()
+
     override fun onCreateEngine(): Engine {
         return IxekenEngineHost()
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        activeHosts.forEach { host ->
+            host.trimMemory(level)
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val prefs = getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
+        val syncSystemTheme = prefs.getBoolean("syncWithSystemTheme", false)
+        if (syncSystemTheme) {
+            val intent = Intent(ACTION_SETTINGS_CHANGED)
+            intent.setPackage(packageName)
+            sendBroadcast(intent)
+        }
     }
 
     inner class IxekenEngineHost : Engine() {
@@ -36,6 +57,7 @@ class IxekenWallpaperService : WallpaperService() {
 
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
+            activeHosts.add(this)
             prefs = getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
             
             // Registrar el receptor de mensajes de la App
@@ -74,6 +96,7 @@ class IxekenWallpaperService : WallpaperService() {
             }
             
             // 4. Inicializar y activar
+            activeEngine?.setEngineHost(this)
             activeEngine?.onCreate(holder)
             if (isVisible) {
                 activeEngine?.onVisibilityChanged(true)
@@ -95,8 +118,13 @@ class IxekenWallpaperService : WallpaperService() {
             activeEngine?.onTouchEvent(event)
         }
 
+        fun trimMemory(level: Int) {
+            activeEngine?.onTrimMemory(level)
+        }
+
         override fun onDestroy() {
             super.onDestroy()
+            activeHosts.remove(this)
             try {
                 unregisterReceiver(settingsReceiver)
             } catch (e: Exception) {}

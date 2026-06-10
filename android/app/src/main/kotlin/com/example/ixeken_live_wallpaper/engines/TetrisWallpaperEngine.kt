@@ -18,6 +18,7 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
     private var isVisible = false
     private val paint = Paint().apply { isAntiAlias = true }
     private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
+    private var engineHost: android.service.wallpaper.WallpaperService.Engine? = null
     
     private val cols = 10
     private var rows = 20
@@ -45,14 +46,47 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
         arrayOf(arrayOf(intArrayOf(1,1,0),intArrayOf(0,1,1)), arrayOf(intArrayOf(0,1),intArrayOf(1,1),intArrayOf(1,0)))
     )
 
+    private var lastLockFrameTimeMs = 0L
+
     private val frameCallback = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             if (isVisible) {
-                updateLogic()
-                drawFrame()
+                if (isLockScreen()) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastLockFrameTimeMs >= 1000L) {
+                        lastLockFrameTimeMs = now
+                        updateLogic()
+                        drawFrame()
+                    }
+                } else {
+                    updateLogic()
+                    drawFrame()
+                }
                 Choreographer.getInstance().postFrameCallback(this)
             }
         }
+    }
+
+    override fun setEngineHost(host: android.service.wallpaper.WallpaperService.Engine) {
+        engineHost = host
+    }
+
+    private fun isLockScreen(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            val host = engineHost
+            if (host != null) {
+                val flags = try { host.getWallpaperFlags() } catch (e: Exception) { 0 }
+                if (flags != 0) {
+                    val isLock = (flags and android.app.WallpaperManager.FLAG_LOCK) != 0
+                    val isSystem = (flags and android.app.WallpaperManager.FLAG_SYSTEM) != 0
+                    if (isLock && !isSystem) {
+                        return true
+                    }
+                }
+            }
+        }
+        val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+        return keyguardManager?.isKeyguardLocked == true
     }
 
     override fun onCreate(holder: SurfaceHolder) {
@@ -62,9 +96,26 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
     }
 
     private fun resetGrid(width: Int, height: Int) {
-        cellSize = width.toFloat() / cols
-        rows = (height / cellSize).toInt()
+        val newCellSize = width.toFloat() / cols
+        val newRows = (height / newCellSize).toInt()
+        
+        if (newRows == rows && newCellSize == cellSize) {
+            return
+        }
+        
+        val oldGrid = grid
+        cellSize = newCellSize
+        rows = newRows
         grid = Array(rows) { IntArray(cols) { 0 } }
+        
+        if (oldGrid.isNotEmpty()) {
+            val copyRows = Math.min(oldGrid.size, rows)
+            val offsetOld = oldGrid.size - copyRows
+            val offsetNew = rows - copyRows
+            for (i in 0 until copyRows) {
+                grid[offsetNew + i] = oldGrid[offsetOld + i].copyOf()
+            }
+        }
     }
 
     private fun spawnPiece() {
@@ -264,6 +315,13 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
                 if (shape[y][x] != 0) drawBlock(canvas, currentPieceX + x, currentPieceY + y, currentPieceType + 1, style, true)
             }
         }
+
+        val isDim = prefs.getBoolean("isDimEnabled", false)
+        if (isDim) {
+            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
+            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
+            canvas.drawColor(Color.argb(alpha, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
+        }
     }
 
     private fun drawBlock(canvas: Canvas, x: Int, y: Int, colorIndex: Int, style: String, isCurrent: Boolean = false) {
@@ -344,8 +402,12 @@ class TetrisWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
 
     private fun drawFrame() {
         val holder = currentHolder ?: return
-        val canvas = if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        if (canvas == null) return
+        if (!holder.surface.isValid) return
+        val canvas = try {
+            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
+        } catch (e: Exception) {
+            try { holder.lockCanvas() } catch (ex: Exception) { null }
+        } ?: return
         try {
             onDraw(canvas)
         } finally {
