@@ -4,51 +4,23 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.PorterDuff
 import android.graphics.RadialGradient
 import android.graphics.Shader
-import android.view.Choreographer
-import android.view.SurfaceHolder
 import kotlin.math.cos
 import kotlin.math.sin
 
-class LiquidGradientWallpaperEngine(private val context: Context) : IxekenWallpaperEngine {
+class LiquidGradientWallpaperEngine(context: Context) : BaseWallpaperEngine(context) {
     
-    private var currentHolder: SurfaceHolder? = null
-    private var isVisible = false
     private var time = 0f
-    
     private val paint = Paint().apply { isAntiAlias = true }
-    private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
     
-    private val frameCallback = object : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            if (isVisible) {
-                time += 0.002f // Movimiento extremadamente suave y lento
-                drawFrame()
-                Choreographer.getInstance().postFrameCallback(this)
-            }
-        }
-    }
-
-    override fun onCreate(holder: SurfaceHolder) {
-        currentHolder = holder
-    }
-
-    override fun onVisibilityChanged(visible: Boolean) {
-        isVisible = visible
-        if (visible) Choreographer.getInstance().postFrameCallback(frameCallback)
-        else Choreographer.getInstance().removeFrameCallback(frameCallback)
-    }
-
-    override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        currentHolder = holder
+    override fun onUpdatePhysics() {
+        time += 0.002f // Movimiento extremadamente suave y lento
     }
 
     override fun onDraw(canvas: Canvas) {
         val w = canvas.width.toFloat()
         val h = canvas.height.toFloat()
-        val isDim = prefs.getBoolean("isDimEnabled", false)
         
         // 1. Fondo base muy oscuro (azul espacial profundo)
         canvas.drawColor(Color.parseColor("#080512"))
@@ -73,13 +45,6 @@ class LiquidGradientWallpaperEngine(private val context: Context) : IxekenWallpa
         val x4 = w * 0.6f + cos(time * 0.6f) * (w * 0.25f)
         val y4 = h * 0.4f + sin(time * 0.7f) * (h * 0.2f)
         drawBlob(canvas, x4, y4, w * 0.7f, Color.parseColor("#8B5CF6"), 0.3f) // Violet
-
-        // 3. Efecto Dim opcional para oscurecer el fondo
-        if (isDim) {
-            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
-            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
-            canvas.drawColor(Color.argb(alpha, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
-        }
     }
     
     private fun drawBlob(canvas: Canvas, x: Float, y: Float, radius: Float, color: Int, opacity: Float) {
@@ -99,25 +64,5 @@ class LiquidGradientWallpaperEngine(private val context: Context) : IxekenWallpa
         
         // Dibujar círculo que contiene el gradiente radial (acelerado por hardware)
         canvas.drawCircle(x, y, radius, paint)
-    }
-
-    private fun drawFrame() {
-        val holder = currentHolder ?: return
-        if (!holder.surface.isValid) return
-        val canvas = try {
-            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        } catch (e: Exception) {
-            try { holder.lockCanvas() } catch (ex: Exception) { null }
-        } ?: return
-        try {
-            onDraw(canvas)
-        } finally {
-            holder.unlockCanvasAndPost(canvas)
-        }
-    }
-
-    override fun onDestroy() {
-        isVisible = false
-        Choreographer.getInstance().removeFrameCallback(frameCallback)
     }
 }

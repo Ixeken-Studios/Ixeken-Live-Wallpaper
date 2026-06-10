@@ -4,62 +4,38 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.view.Choreographer
 import android.view.SurfaceHolder
 import kotlin.random.Random
 
-class PlexusWallpaperEngine(private val context: Context) : IxekenWallpaperEngine {
+class PlexusWallpaperEngine(context: Context) : BaseWallpaperEngine(context) {
     
-    private var currentHolder: SurfaceHolder? = null
-    private var isVisible = false
     private val paint = Paint().apply { isAntiAlias = true }
     private val particles = mutableListOf<Node>()
     private val numNodes = 50
     private val connectionDistance = 250f
-    private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
-    
-    private val frameCallback = object : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            if (isVisible) {
-                drawFrame()
-                Choreographer.getInstance().postFrameCallback(this)
-            }
-        }
-    }
 
     override fun onCreate(holder: SurfaceHolder) {
-        currentHolder = holder
+        super.onCreate(holder)
         initNodes(holder.surfaceFrame.width(), holder.surfaceFrame.height())
     }
 
     private fun initNodes(width: Int, height: Int) {
         particles.clear()
+        val w = if (width > 0) width else 1080
+        val h = if (height > 0) height else 1920
         repeat(numNodes) {
             particles.add(Node(
-                x = Random.nextFloat() * width,
-                y = Random.nextFloat() * height,
+                x = Random.nextFloat() * w,
+                y = Random.nextFloat() * h,
                 vx = (Random.nextFloat() - 0.5f) * 2f,
                 vy = (Random.nextFloat() - 0.5f) * 2f
             ))
         }
     }
 
-    override fun onVisibilityChanged(visible: Boolean) {
-        isVisible = visible
-        if (visible) Choreographer.getInstance().postFrameCallback(frameCallback)
-        else Choreographer.getInstance().removeFrameCallback(frameCallback)
-    }
-
-    override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        currentHolder = holder
-        initNodes(width, height)
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        canvas.drawColor(Color.parseColor("#050A10"))
-        
-        val w = canvas.width.toFloat()
-        val h = canvas.height.toFloat()
+    override fun onUpdatePhysics() {
+        val w = currentHolder?.surfaceFrame?.width()?.toFloat() ?: 1080f
+        val h = currentHolder?.surfaceFrame?.height()?.toFloat() ?: 1920f
 
         // Actualizar posiciones
         for (n in particles) {
@@ -68,7 +44,11 @@ class PlexusWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
             if (n.x < 0 || n.x > w) n.vx *= -1
             if (n.y < 0 || n.y > h) n.vy *= -1
         }
+    }
 
+    override fun onDraw(canvas: Canvas) {
+        canvas.drawColor(Color.parseColor("#050A10"))
+        
         // Dibujar conexiones
         for (i in 0 until particles.size) {
             for (j in i + 1 until particles.size) {
@@ -95,33 +75,11 @@ class PlexusWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
         for (n in particles) {
             canvas.drawCircle(n.x, n.y, 4f, paint)
         }
-
-        val isDim = prefs.getBoolean("isDimEnabled", false)
-        if (isDim) {
-            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
-            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
-            canvas.drawColor(Color.argb(alpha, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_OVER)
-        }
     }
 
-    private fun drawFrame() {
-        val holder = currentHolder ?: return
-        if (!holder.surface.isValid) return
-        val canvas = try {
-            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        } catch (e: Exception) {
-            try { holder.lockCanvas() } catch (ex: Exception) { null }
-        } ?: return
-        try {
-            onDraw(canvas)
-        } finally {
-            holder.unlockCanvasAndPost(canvas)
-        }
-    }
-
-    override fun onDestroy() {
-        isVisible = false
-        Choreographer.getInstance().removeFrameCallback(frameCallback)
+    override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+        super.onSurfaceChanged(holder, format, width, height)
+        initNodes(width, height)
     }
 
     data class Node(var x: Float, var y: Float, var vx: Float, var vy: Float)

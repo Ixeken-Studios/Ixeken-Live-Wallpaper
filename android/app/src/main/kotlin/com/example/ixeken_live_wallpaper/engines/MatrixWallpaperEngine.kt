@@ -4,16 +4,14 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.PorterDuff
 import android.graphics.Typeface
-import android.view.Choreographer
 import android.view.SurfaceHolder
 import kotlin.random.Random
 
-class MatrixWallpaperEngine(private val context: Context) : IxekenWallpaperEngine {
+class MatrixWallpaperEngine(context: Context) : BaseWallpaperEngine(context) {
     
-    private var currentHolder: SurfaceHolder? = null
-    private var isVisible = false
+    override val frameIntervalMs = 45L // ~22 FPS para movimiento cinemático clásico de Matrix
+
     private val paint = Paint().apply {
         isAntiAlias = true
         typeface = Typeface.MONOSPACE
@@ -24,12 +22,6 @@ class MatrixWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
     private val chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ日ハミヒヘホマミムメモヤユヨラリルレロ".toCharArray()
     private val drops = mutableListOf<MatrixDrop>()
     
-    private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
-
-    private var lastFrameTime = 0L
-    private val frameInterval = 45L // ~22 FPS para movimiento cinemático clásico de Matrix
-
-    // Estructura de gota para representar cada columna de lluvia
     data class MatrixDrop(
         val x: Float,
         var y: Float, // posición de la cabeza de la gota en caracteres
@@ -38,21 +30,8 @@ class MatrixWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
         val columnChars: MutableList<Char>
     )
 
-    private val frameCallback = object : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            if (isVisible) {
-                val now = System.currentTimeMillis()
-                if (now - lastFrameTime >= frameInterval) {
-                    drawFrame()
-                    lastFrameTime = now
-                }
-                Choreographer.getInstance().postFrameCallback(this)
-            }
-        }
-    }
-
     override fun onCreate(holder: SurfaceHolder) {
-        currentHolder = holder
+        super.onCreate(holder)
         initMatrix(holder.surfaceFrame.width(), holder.surfaceFrame.height())
     }
 
@@ -81,30 +60,8 @@ class MatrixWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
         }
     }
 
-    override fun onVisibilityChanged(visible: Boolean) {
-        isVisible = visible
-        if (visible) {
-            lastFrameTime = System.currentTimeMillis()
-            Choreographer.getInstance().postFrameCallback(frameCallback)
-        } else {
-            Choreographer.getInstance().removeFrameCallback(frameCallback)
-        }
-    }
-
-    override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        currentHolder = holder
-        initMatrix(width, height)
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        // Fondo negro profundo y sólido (evita problemas acumulativos de doble búfer)
-        canvas.drawColor(Color.parseColor("#020402"))
-        
-        paint.textAlign = Paint.Align.CENTER
-        
-        val rowsCount = (canvas.height / charSize).toInt() + 2
-        val isDim = prefs.getBoolean("isDimEnabled", false)
-        
+    override fun onUpdatePhysics() {
+        val rowsCount = ((currentHolder?.surfaceFrame?.height() ?: 1920) / charSize).toInt() + 2
         for (drop in drops) {
             // Actualizar posición de la cabeza
             drop.y += drop.speed
@@ -117,7 +74,17 @@ class MatrixWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
                 val idx = Random.nextInt(drop.columnChars.size)
                 drop.columnChars[idx] = chars[Random.nextInt(chars.size)]
             }
-            
+        }
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        // Fondo negro profundo y sólido
+        canvas.drawColor(Color.parseColor("#020402"))
+        
+        paint.textAlign = Paint.Align.CENTER
+        val rowsCount = (canvas.height / charSize).toInt() + 2
+        
+        for (drop in drops) {
             // Dibujar el trail de abajo hacia arriba (cabeza a cola)
             val headIndex = drop.y.toInt()
             for (j in 0 until drop.length) {
@@ -137,7 +104,7 @@ class MatrixWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
                     paint.setShadowLayer(14f, 0f, 0f, Color.parseColor("#34D399")) // Brillo verde brillante
                 } else {
                     // El cuerpo es verde degradado
-                    paint.color = Color.argb(alpha, 16, 185, 129) // Emerald-500 (#10B981)
+                    paint.color = Color.argb(alpha, 16, 185, 129) // Emerald-500
                     paint.clearShadowLayer()
                 }
                 
@@ -145,31 +112,10 @@ class MatrixWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
             }
         }
         paint.clearShadowLayer()
-        
-        if (isDim) {
-            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
-            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
-            canvas.drawColor(Color.argb(alpha, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
-        }
     }
 
-    private fun drawFrame() {
-        val holder = currentHolder ?: return
-        if (!holder.surface.isValid) return
-        val canvas = try {
-            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        } catch (e: Exception) {
-            try { holder.lockCanvas() } catch (ex: Exception) { null }
-        } ?: return
-        try {
-            onDraw(canvas)
-        } finally {
-            holder.unlockCanvasAndPost(canvas)
-        }
-    }
-
-    override fun onDestroy() {
-        isVisible = false
-        Choreographer.getInstance().removeFrameCallback(frameCallback)
+    override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+        super.onSurfaceChanged(holder, format, width, height)
+        initMatrix(width, height)
     }
 }

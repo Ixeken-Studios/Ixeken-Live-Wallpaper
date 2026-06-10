@@ -28,6 +28,12 @@ class L10n {
       'wallpaper_restore_error': 'Error al restablecer fondo',
       'select_photo_error': 'Selecciona al menos una foto para el carrusel',
       'preferences': 'Preferencias',
+      'appearance': 'Apariencia',
+      'appearance_sub': 'Tema y fuentes',
+      'theme_mode': 'Modo del Tema',
+      'font_style': 'Estilo de la Fuente',
+      'customize_gs_flex': 'Personalizar variaciones de GS Flex',
+      'font_opt_system': 'Sistema',
       'app_theme': 'Tema de la Aplicación',
       'theme_sync_system': 'Sincronizado con el sistema',
       'theme_light': 'Tema Claro',
@@ -91,6 +97,9 @@ class L10n {
       'skipped_files': 'Se omitieron {} archivo(s) por estar dañados o ser incompatibles.',
       'active': 'Activo',
       'activate': 'Activar',
+      'opt_lower_fps': 'Reducir FPS a la mitad',
+      'opt_lower_fps_sub': 'Mejora el rendimiento y reduce el uso de batería.',
+      'fps_battery_saver_notice': 'Aviso: El límite de FPS se activa automáticamente con el ahorro de batería de Android.',
       
       // Engine Names
       'engine_particles': 'Partículas Flotantes',
@@ -134,6 +143,12 @@ class L10n {
       'wallpaper_restore_error': 'Error restoring wallpaper',
       'select_photo_error': 'Select at least one photo for the carousel',
       'preferences': 'Preferences',
+      'appearance': 'Appearance',
+      'appearance_sub': 'Theme and fonts',
+      'theme_mode': 'Theme Mode',
+      'font_style': 'Font Style',
+      'customize_gs_flex': 'Customize GS Flex Variations',
+      'font_opt_system': 'System',
       'app_theme': 'App Theme',
       'theme_sync_system': 'Synchronized with system',
       'theme_light': 'Light Theme',
@@ -197,6 +212,9 @@ class L10n {
       'skipped_files': 'Skipped {} file(s) due to corruption or incompatibility.',
       'active': 'Active',
       'activate': 'Activate',
+      'opt_lower_fps': 'Halve FPS',
+      'opt_lower_fps_sub': 'Improves performance and reduces battery usage.',
+      'fps_battery_saver_notice': 'Notice: FPS limit is automatically enabled when Android\'s Battery Saver mode active.',
       
       // Engine Names
       'engine_particles': 'Floating Particles',
@@ -314,6 +332,15 @@ class L10n {
   String get add => get('add');
   String get active => get('active');
   String get activate => get('activate');
+  String get appearance => get('appearance');
+  String get appearanceSub => get('appearance_sub');
+  String get themeModeTitle => get('theme_mode');
+  String get fontStyleTitle => get('font_style');
+  String get customizeGsFlex => get('customize_gs_flex');
+  String get fontOptSystem => get('font_opt_system');
+  String get optLowerFps => get('opt_lower_fps');
+  String get optLowerFpsSub => get('opt_lower_fps_sub');
+  String get fpsBatterySaverNotice => get('fps_battery_saver_notice');
   
   // Engine Names
   String get engineParticles => get('engine_particles');

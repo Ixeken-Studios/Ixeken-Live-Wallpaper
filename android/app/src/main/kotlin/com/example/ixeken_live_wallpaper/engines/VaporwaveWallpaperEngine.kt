@@ -5,51 +5,21 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.RectF
 import android.graphics.Shader
-import android.view.Choreographer
-import android.view.SurfaceHolder
 import kotlin.math.pow
 
-class VaporwaveWallpaperEngine(private val context: Context) : IxekenWallpaperEngine {
-    
-    private var currentHolder: SurfaceHolder? = null
-    private var isVisible = false
-    private val paint = Paint().apply { isAntiAlias = true }
-    private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
+class VaporwaveWallpaperEngine(context: Context) : BaseWallpaperEngine(context) {
     
     private var time = 0f
+    private val paint = Paint().apply { isAntiAlias = true }
     
-    private val frameCallback = object : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            if (isVisible) {
-                time += 0.015f
-                drawFrame()
-                Choreographer.getInstance().postFrameCallback(this)
-            }
-        }
-    }
-
-    override fun onCreate(holder: SurfaceHolder) {
-        currentHolder = holder
-    }
-
-    override fun onVisibilityChanged(visible: Boolean) {
-        isVisible = visible
-        if (visible) Choreographer.getInstance().postFrameCallback(frameCallback)
-        else Choreographer.getInstance().removeFrameCallback(frameCallback)
-    }
-
-    override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        currentHolder = holder
+    override fun onUpdatePhysics() {
+        time += 0.015f
     }
 
     override fun onDraw(canvas: Canvas) {
         val w = canvas.width.toFloat()
         val h = canvas.height.toFloat()
-        val isDim = prefs.getBoolean("isDimEnabled", false)
-        
         val horizon = h * 0.48f
         
         // 1. Dibujar cielo degradado (Cyberpunk Sunset)
@@ -113,13 +83,11 @@ class VaporwaveWallpaperEngine(private val context: Context) : IxekenWallpaperEn
         }
         
         // Líneas horizontales con perspectiva exponencial móvil
-        // time % 1.0f nos da una fase cíclica de 0 a 1
         val gridPhase = (time * 0.8f) % 1.0f
         val groundHeight = h - horizon
         
         val numHorizontalLines = 12
         for (i in 0..numHorizontalLines) {
-            // Factor exponencial para la perspectiva
             val progress = (i.toFloat() - gridPhase) / numHorizontalLines.toFloat()
             if (progress < 0) continue
             
@@ -134,32 +102,5 @@ class VaporwaveWallpaperEngine(private val context: Context) : IxekenWallpaperEn
             
             canvas.drawLine(0f, gridY, w, gridY, paint)
         }
-
-        // 5. Capa Dim si está activa
-        if (isDim) {
-            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
-            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
-            canvas.drawColor(Color.argb(alpha, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
-        }
-    }
-
-    private fun drawFrame() {
-        val holder = currentHolder ?: return
-        if (!holder.surface.isValid) return
-        val canvas = try {
-            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        } catch (e: Exception) {
-            try { holder.lockCanvas() } catch (ex: Exception) { null }
-        } ?: return
-        try {
-            onDraw(canvas)
-        } finally {
-            holder.unlockCanvasAndPost(canvas)
-        }
-    }
-
-    override fun onDestroy() {
-        isVisible = false
-        Choreographer.getInstance().removeFrameCallback(frameCallback)
     }
 }

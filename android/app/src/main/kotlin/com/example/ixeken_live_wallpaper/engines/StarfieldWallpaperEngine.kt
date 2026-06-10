@@ -4,18 +4,13 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import kotlin.random.Random
 
-class StarfieldWallpaperEngine(private val context: Context) : IxekenWallpaperEngine {
+class StarfieldWallpaperEngine(context: Context) : BaseWallpaperEngine(context) {
     
-    private var currentHolder: SurfaceHolder? = null
-    private var isVisible = false
     private val paint = Paint().apply { isAntiAlias = true }
-    private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
-    
     private val stars = mutableListOf<Star>()
     private val numStars = 150
     
@@ -23,19 +18,9 @@ class StarfieldWallpaperEngine(private val context: Context) : IxekenWallpaperEn
     private var currentSpeed = 6f
     private val normalSpeed = 6f
     private val warpSpeed = 32f
-    
-    private val frameCallback = object : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            if (isVisible) {
-                updateLogic()
-                drawFrame()
-                Choreographer.getInstance().postFrameCallback(this)
-            }
-        }
-    }
 
     override fun onCreate(holder: SurfaceHolder) {
-        currentHolder = holder
+        super.onCreate(holder)
         initStars(holder.surfaceFrame.width(), holder.surfaceFrame.height())
     }
 
@@ -60,14 +45,13 @@ class StarfieldWallpaperEngine(private val context: Context) : IxekenWallpaperEn
         }
     }
 
-    private fun updateLogic() {
+    override fun onUpdatePhysics() {
         // Interpolar suavemente hacia la velocidad objetivo
         val targetSpeed = if (isWarping) warpSpeed else normalSpeed
         currentSpeed += (targetSpeed - currentSpeed) * 0.12f
         
-        val holder = currentHolder ?: return
-        val w = holder.surfaceFrame.width().toFloat()
-        val h = holder.surfaceFrame.height().toFloat()
+        val w = currentHolder?.surfaceFrame?.width()?.toFloat() ?: 1080f
+        val h = currentHolder?.surfaceFrame?.height()?.toFloat() ?: 1920f
 
         for (s in stars) {
             s.prevZ = s.z
@@ -123,13 +107,6 @@ class StarfieldWallpaperEngine(private val context: Context) : IxekenWallpaperEn
                 canvas.drawCircle(x2d, y2d, thickness * 0.7f, paint)
             }
         }
-
-        val isDim = prefs.getBoolean("isDimEnabled", false)
-        if (isDim) {
-            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
-            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
-            canvas.drawColor(Color.argb(alpha, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_OVER)
-        }
     }
 
     override fun onTouchEvent(event: MotionEvent) {
@@ -140,38 +117,15 @@ class StarfieldWallpaperEngine(private val context: Context) : IxekenWallpaperEn
     }
 
     override fun onVisibilityChanged(visible: Boolean) {
-        isVisible = visible
-        if (visible) {
-            Choreographer.getInstance().postFrameCallback(frameCallback)
-        } else {
-            Choreographer.getInstance().removeFrameCallback(frameCallback)
+        super.onVisibilityChanged(visible)
+        if (!visible) {
             isWarping = false
         }
     }
 
     override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        currentHolder = holder
+        super.onSurfaceChanged(holder, format, width, height)
         initStars(width, height)
-    }
-
-    private fun drawFrame() {
-        val holder = currentHolder ?: return
-        if (!holder.surface.isValid) return
-        val canvas = try {
-            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        } catch (e: Exception) {
-            try { holder.lockCanvas() } catch (ex: Exception) { null }
-        } ?: return
-        try {
-            onDraw(canvas)
-        } finally {
-            holder.unlockCanvasAndPost(canvas)
-        }
-    }
-
-    override fun onDestroy() {
-        isVisible = false
-        Choreographer.getInstance().removeFrameCallback(frameCallback)
     }
 
     data class Star(

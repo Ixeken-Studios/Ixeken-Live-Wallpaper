@@ -1,7 +1,6 @@
 package com.example.ixeken_live_wallpaper.engines
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -9,21 +8,15 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.view.Choreographer
 import android.view.SurfaceHolder
 import kotlin.random.Random
 
-class ParticlesWallpaperEngine(private val context: Context) : IxekenWallpaperEngine, SensorEventListener {
+class ParticlesWallpaperEngine(context: Context) : BaseWallpaperEngine(context), SensorEventListener {
     
-    private val prefs: SharedPreferences = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
-    private var currentHolder: SurfaceHolder? = null
-    private var isVisible = false
     private val paint = Paint().apply { isAntiAlias = true }
     private val particles = mutableListOf<Particle>()
     private val numParticles = 40
     
-    private var lastFrameTimeMs = 0L
-
     private var sensorManager: SensorManager? = null
     private var rotationSensor: Sensor? = null
     private var isParallaxEnabled = false
@@ -32,29 +25,8 @@ class ParticlesWallpaperEngine(private val context: Context) : IxekenWallpaperEn
     private var smoothOffsetX = 0f
     private var smoothOffsetY = 0f
 
-    private val frameCallback = object : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            if (isVisible) {
-                val now = System.currentTimeMillis()
-                val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
-                val isPowerSave = powerManager?.isPowerSaveMode == true
-                val targetInterval = if (isPowerSave) 33L else 0L
-                
-                if (now - lastFrameTimeMs >= targetInterval) {
-                    lastFrameTimeMs = now
-                    if (isParallaxEnabled) {
-                        smoothOffsetX = smoothOffsetX * 0.9f + targetOffsetX * 0.1f
-                        smoothOffsetY = smoothOffsetY * 0.9f + targetOffsetY * 0.1f
-                    }
-                    drawFrame()
-                }
-                Choreographer.getInstance().postFrameCallback(this)
-            }
-        }
-    }
-
     override fun onCreate(holder: SurfaceHolder) {
-        currentHolder = holder
+        super.onCreate(holder)
         isParallaxEnabled = prefs.getBoolean("isParallaxEnabled", false)
         if (isParallaxEnabled) {
             sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -80,20 +52,20 @@ class ParticlesWallpaperEngine(private val context: Context) : IxekenWallpaperEn
         }
     }
 
-    override fun onVisibilityChanged(visible: Boolean) {
-        isVisible = visible
-        if (visible) {
-            registerSensor()
-            Choreographer.getInstance().postFrameCallback(frameCallback)
-        } else {
-            unregisterSensor()
-            Choreographer.getInstance().removeFrameCallback(frameCallback)
+    override fun onUpdatePhysics() {
+        if (isParallaxEnabled) {
+            smoothOffsetX = smoothOffsetX * 0.9f + targetOffsetX * 0.1f
+            smoothOffsetY = smoothOffsetY * 0.9f + targetOffsetY * 0.1f
         }
-    }
-
-    override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        currentHolder = holder
-        initParticles(width, height)
+        
+        val w = currentHolder?.surfaceFrame?.width()?.toFloat() ?: 1080f
+        val h = currentHolder?.surfaceFrame?.height()?.toFloat() ?: 1920f
+        for (p in particles) {
+            p.x += p.vx
+            p.y += p.vy
+            if (p.x < 0 || p.x > w) p.vx *= -1
+            if (p.y < 0 || p.y > h) p.vy *= -1
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -104,48 +76,25 @@ class ParticlesWallpaperEngine(private val context: Context) : IxekenWallpaperEn
             canvas.translate(smoothOffsetX, smoothOffsetY)
         }
         
-        val width = canvas.width.toFloat()
-        val height = canvas.height.toFloat()
-
         for (p in particles) {
-            p.x += p.vx
-            p.y += p.vy
-
-            if (p.x < 0 || p.x > width) p.vx *= -1
-            if (p.y < 0 || p.y > height) p.vy *= -1
-
             paint.color = p.color
             canvas.drawCircle(p.x, p.y, p.radius, paint)
         }
         canvas.restore()
-
-        val isDim = prefs.getBoolean("isDimEnabled", false)
-        if (isDim) {
-            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
-            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
-            canvas.drawColor(Color.argb(alpha, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_OVER)
-        }
     }
 
-    private fun drawFrame() {
-        val holder = currentHolder ?: return
-        if (!holder.surface.isValid) return
-        val canvas = try {
-            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        } catch (e: Exception) {
-            try { holder.lockCanvas() } catch (ex: Exception) { null }
-        } ?: return
-        try {
-            onDraw(canvas)
-        } finally {
-            holder.unlockCanvasAndPost(canvas)
+    override fun onVisibilityChanged(visible: Boolean) {
+        super.onVisibilityChanged(visible)
+        if (visible) {
+            registerSensor()
+        } else {
+            unregisterSensor()
         }
     }
 
     override fun onDestroy() {
-        isVisible = false
+        super.onDestroy()
         unregisterSensor()
-        Choreographer.getInstance().removeFrameCallback(frameCallback)
     }
 
     private fun registerSensor() {
@@ -183,6 +132,11 @@ class ParticlesWallpaperEngine(private val context: Context) : IxekenWallpaperEn
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+    override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+        super.onSurfaceChanged(holder, format, width, height)
+        initParticles(width, height)
+    }
 
     data class Particle(
         var x: Float,

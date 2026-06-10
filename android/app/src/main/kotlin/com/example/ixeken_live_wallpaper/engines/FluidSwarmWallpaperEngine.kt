@@ -4,8 +4,6 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import kotlin.math.cos
@@ -13,14 +11,9 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-class FluidSwarmWallpaperEngine(private val context: Context) : IxekenWallpaperEngine {
+class FluidSwarmWallpaperEngine(context: Context) : BaseWallpaperEngine(context) {
     
-    private var currentHolder: SurfaceHolder? = null
-    private var isVisible = false
     private val paint = Paint().apply { isAntiAlias = true }
-    private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
-    private var engineHost: android.service.wallpaper.WallpaperService.Engine? = null
-    
     private val particles = mutableListOf<FluidParticle>()
     private val numParticles = 140
     private var time = 0f
@@ -28,54 +21,9 @@ class FluidSwarmWallpaperEngine(private val context: Context) : IxekenWallpaperE
     private var isTouching = false
     private var touchX = 0f
     private var touchY = 0f
-    
-    private var lastLockFrameTimeMs = 0L
-    
-    private val frameCallback = object : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            if (isVisible) {
-                if (isLockScreen()) {
-                    val now = System.currentTimeMillis()
-                    if (now - lastLockFrameTimeMs >= 1000L) {
-                        lastLockFrameTimeMs = now
-                        time += 0.01f
-                        updateLogic()
-                        drawFrame()
-                    }
-                } else {
-                    time += 0.01f
-                    updateLogic()
-                    drawFrame()
-                }
-                Choreographer.getInstance().postFrameCallback(this)
-            }
-        }
-    }
-
-    override fun setEngineHost(host: android.service.wallpaper.WallpaperService.Engine) {
-        engineHost = host
-    }
-
-    private fun isLockScreen(): Boolean {
-        if (android.os.Build.VERSION.SDK_INT >= 34) {
-            val host = engineHost
-            if (host != null) {
-                val flags = try { host.getWallpaperFlags() } catch (e: Exception) { 0 }
-                if (flags != 0) {
-                    val isLock = (flags and android.app.WallpaperManager.FLAG_LOCK) != 0
-                    val isSystem = (flags and android.app.WallpaperManager.FLAG_SYSTEM) != 0
-                    if (isLock && !isSystem) {
-                        return true
-                    }
-                }
-            }
-        }
-        val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
-        return keyguardManager?.isKeyguardLocked == true
-    }
 
     override fun onCreate(holder: SurfaceHolder) {
-        currentHolder = holder
+        super.onCreate(holder)
         initParticles(holder.surfaceFrame.width(), holder.surfaceFrame.height())
     }
 
@@ -104,6 +52,11 @@ class FluidSwarmWallpaperEngine(private val context: Context) : IxekenWallpaperE
                 color = colorPalette[Random.nextInt(colorPalette.size)]
             ).apply { px = x; py = y })
         }
+    }
+
+    override fun onUpdatePhysics() {
+        time += 0.01f
+        updateLogic()
     }
 
     private fun updateLogic() {
@@ -151,8 +104,6 @@ class FluidSwarmWallpaperEngine(private val context: Context) : IxekenWallpaperE
     }
 
     override fun onDraw(canvas: Canvas) {
-        val isDim = prefs.getBoolean("isDimEnabled", false)
-        
         // Espacio negro/azul oscuro
         canvas.drawColor(Color.parseColor("#06050F"))
         
@@ -171,12 +122,6 @@ class FluidSwarmWallpaperEngine(private val context: Context) : IxekenWallpaperE
             paint.style = Paint.Style.FILL
             canvas.drawCircle(p.x, p.y, p.radius, paint)
         }
-
-        if (isDim) {
-            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
-            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
-            canvas.drawColor(Color.argb(alpha, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
-        }
     }
 
     override fun onTouchEvent(event: MotionEvent) {
@@ -193,38 +138,15 @@ class FluidSwarmWallpaperEngine(private val context: Context) : IxekenWallpaperE
     }
 
     override fun onVisibilityChanged(visible: Boolean) {
-        isVisible = visible
-        if (visible) {
-            Choreographer.getInstance().postFrameCallback(frameCallback)
-        } else {
-            Choreographer.getInstance().removeFrameCallback(frameCallback)
+        super.onVisibilityChanged(visible)
+        if (!visible) {
             isTouching = false
         }
     }
 
     override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        currentHolder = holder
+        super.onSurfaceChanged(holder, format, width, height)
         initParticles(width, height)
-    }
-
-    private fun drawFrame() {
-        val holder = currentHolder ?: return
-        if (!holder.surface.isValid) return
-        val canvas = try {
-            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        } catch (e: Exception) {
-            try { holder.lockCanvas() } catch (ex: Exception) { null }
-        } ?: return
-        try {
-            onDraw(canvas)
-        } finally {
-            holder.unlockCanvasAndPost(canvas)
-        }
-    }
-
-    override fun onDestroy() {
-        isVisible = false
-        Choreographer.getInstance().removeFrameCallback(frameCallback)
     }
 
     data class FluidParticle(

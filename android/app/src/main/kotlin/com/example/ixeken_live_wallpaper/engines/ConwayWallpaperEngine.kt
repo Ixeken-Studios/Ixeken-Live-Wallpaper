@@ -4,19 +4,14 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.PorterDuff
 import android.graphics.RectF
-import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.SurfaceHolder
 import kotlin.random.Random
 
-class ConwayWallpaperEngine(private val context: Context) : IxekenWallpaperEngine {
+class ConwayWallpaperEngine(context: Context) : BaseWallpaperEngine(context) {
     
-    private var currentHolder: SurfaceHolder? = null
-    private var isVisible = false
     private val paint = Paint().apply { isAntiAlias = true }
-    private val prefs = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
     
     private val cols = 36
     private var rows = 64
@@ -29,32 +24,9 @@ class ConwayWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
     private val updateInterval = 220L
     private var stagnancyCounter = 0
     private var previousHash = 0
-    
-    private var lastFrameTimeMs = 0L
-
-    private val frameCallback = object : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            if (isVisible) {
-                val now = System.currentTimeMillis()
-                val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
-                val isPowerSave = powerManager?.isPowerSaveMode == true
-                val targetInterval = if (isPowerSave) 33L else 0L
-                
-                if (now - lastFrameTimeMs >= targetInterval) {
-                    lastFrameTimeMs = now
-                    if (now - lastUpdate >= updateInterval) {
-                        updateLogic()
-                        lastUpdate = now
-                    }
-                    drawFrame()
-                }
-                Choreographer.getInstance().postFrameCallback(this)
-            }
-        }
-    }
 
     override fun onCreate(holder: SurfaceHolder) {
-        currentHolder = holder
+        super.onCreate(holder)
         resetGrid(holder.surfaceFrame.width(), holder.surfaceFrame.height())
         reseedGrid()
     }
@@ -73,6 +45,14 @@ class ConwayWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
             }
         }
         stagnancyCounter = 0
+    }
+
+    override fun onUpdatePhysics() {
+        val now = System.currentTimeMillis()
+        if (now - lastUpdate >= updateInterval) {
+            updateLogic()
+            lastUpdate = now
+        }
     }
 
     private fun updateLogic() {
@@ -102,7 +82,7 @@ class ConwayWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
         grid = nextGrid
         nextGrid = temp
         
-        // Detección de tablero vacío o estancado (ej. patrones estáticos u osciladores repetitivos)
+        // Detección de tablero vacío o estancado
         if (aliveCount == 0) {
             reseedGrid()
         } else if (currentHash == previousHash) {
@@ -131,10 +111,6 @@ class ConwayWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
     }
 
     override fun onDraw(canvas: Canvas) {
-        val w = canvas.width.toFloat()
-        val h = canvas.height.toFloat()
-        val isDim = prefs.getBoolean("isDimEnabled", false)
-        
         // Limpiar lienzo negro estilo matriz de datos cibernética
         canvas.drawColor(Color.parseColor("#090712"))
         
@@ -159,12 +135,6 @@ class ConwayWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
             }
         }
         paint.clearShadowLayer()
-
-        if (isDim) {
-            val dimIntensity = prefs.getFloat("dim_intensity", 0.43f)
-            val alpha = (dimIntensity * 255).toInt().coerceIn(0, 255)
-            canvas.drawColor(Color.argb(alpha, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
-        }
     }
 
     override fun onTouchEvent(event: MotionEvent) {
@@ -192,39 +162,9 @@ class ConwayWallpaperEngine(private val context: Context) : IxekenWallpaperEngin
         }
     }
 
-    override fun onVisibilityChanged(visible: Boolean) {
-        isVisible = visible
-        if (visible) {
-            lastUpdate = System.currentTimeMillis()
-            Choreographer.getInstance().postFrameCallback(frameCallback)
-        } else {
-            Choreographer.getInstance().removeFrameCallback(frameCallback)
-        }
-    }
-
     override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        currentHolder = holder
+        super.onSurfaceChanged(holder, format, width, height)
         resetGrid(width, height)
         reseedGrid()
-    }
-
-    private fun drawFrame() {
-        val holder = currentHolder ?: return
-        if (!holder.surface.isValid) return
-        val canvas = try {
-            if (android.os.Build.VERSION.SDK_INT >= 26) holder.lockHardwareCanvas() else holder.lockCanvas()
-        } catch (e: Exception) {
-            try { holder.lockCanvas() } catch (ex: Exception) { null }
-        } ?: return
-        try {
-            onDraw(canvas)
-        } finally {
-            holder.unlockCanvasAndPost(canvas)
-        }
-    }
-
-    override fun onDestroy() {
-        isVisible = false
-        Choreographer.getInstance().removeFrameCallback(frameCallback)
     }
 }

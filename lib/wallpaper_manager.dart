@@ -35,6 +35,7 @@ class WallpaperManager {
     bool isParallaxEnabled = false,
     String carouselChangeMode = 'on_visibility',
     int carouselChangeInterval = 60,
+    bool isHalfFpsEnabled = false,
   }) async {
     try {
       final bool result = await _channel.invokeMethod('updateSettings', {
@@ -51,6 +52,7 @@ class WallpaperManager {
         'isParallaxEnabled': isParallaxEnabled,
         'carouselChangeMode': carouselChangeMode,
         'carouselChangeInterval': carouselChangeInterval,
+        'isHalfFpsEnabled': isHalfFpsEnabled,
       });
       return result;
     } on PlatformException catch (e) {

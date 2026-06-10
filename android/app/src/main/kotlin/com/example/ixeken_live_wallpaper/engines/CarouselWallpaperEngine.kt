@@ -23,6 +23,7 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
     
     private val prefs: SharedPreferences = context.getSharedPreferences("WallpaperPrefs", Context.MODE_PRIVATE)
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val bgExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
     private val paint = Paint().apply { isFilterBitmap = true; isDither = true }
     private val dimPaint = Paint().apply {
         colorFilter = PorterDuffColorFilter(Color.argb(110, 0, 0, 0), PorterDuff.Mode.SRC_OVER)
@@ -38,6 +39,8 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
     
     private var fadeAlpha = 255
     private var isAnimating = false
+    private var animationStartTime = 0L
+    private val animationDurationMs = 500L // Transición suave de 500ms
     private var playlist: List<String> = emptyList()
     private var currentIndex = -1
     private var nextIndex = -1
@@ -69,12 +72,18 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
         override fun doFrame(frameTimeNanos: Long) {
             var continueCallback = false
             if (isAnimating) {
-                fadeAlpha += 42
-                if (fadeAlpha >= 255) {
+                val elapsed = System.currentTimeMillis() - animationStartTime
+                val progress = elapsed.toFloat() / animationDurationMs
+                if (progress >= 1f) {
                     fadeAlpha = 255
                     isAnimating = false
-                    previousBitmap?.recycle()
+                    // Reciclado seguro: evitar liberar si es la misma instancia activa o la precalentada
+                    if (previousBitmap != null && previousBitmap != currentBitmap && previousBitmap != nextPreloadedBitmap) {
+                        previousBitmap?.recycle()
+                    }
                     previousBitmap = null
+                } else {
+                    fadeAlpha = (progress * 255).toInt().coerceIn(0, 255)
                 }
                 continueCallback = true
             }
@@ -204,6 +213,11 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
             carouselChangeMode = prefs.getString("carousel_change_mode", "on_visibility") ?: "on_visibility"
             carouselChangeInterval = prefs.getInt("carousel_change_interval", 60)
             
+            // Cargar de inmediato si no hay contenido activo para evitar pantalla negra inicial
+            if (currentBitmap == null && mediaPlayer == null && playlist.isNotEmpty()) {
+                applyRotation()
+            }
+            
             drawCurrentFrame()
             if (isVideo) mediaPlayer?.play()
             registerSensor()
@@ -238,7 +252,11 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
         
         currentIndex = nextIndex
         val nextPath = playlist[currentIndex]
-        isVideo = nextPath.endsWith(".mp4") || nextPath.endsWith(".mkv")
+        val nextIsVideo = nextPath.endsWith(".mp4") || nextPath.endsWith(".mkv")
+        if (nextPath == currentMediaPath && (currentBitmap != null || (nextIsVideo && mediaPlayer != null))) {
+            return
+        }
+        isVideo = nextIsVideo
 
         if (isVideo) {
             currentMediaPath = nextPath
@@ -258,7 +276,7 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
                 startFadeAnimation()
             } else {
                 currentMediaPath = nextPath
-                thread {
+                bgExecutor.submit {
                     val bitmap = loadAndScaleBitmap(currentMediaPath)
                     mainHandler.post { 
                         if (!isDestroyed) {
@@ -279,6 +297,7 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
     private fun startFadeAnimation() {
         fadeAlpha = 0
         isAnimating = true
+        animationStartTime = System.currentTimeMillis()
         Choreographer.getInstance().removeFrameCallback(frameCallback)
         Choreographer.getInstance().postFrameCallback(frameCallback)
     }
@@ -288,7 +307,7 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
         if (index < 0 || index >= playlist.size) return
         val peekPath = playlist[index]
         if (!peekPath.endsWith(".mp4") && !peekPath.endsWith(".mkv")) {
-            thread {
+            bgExecutor.submit {
                 val bitmap = loadAndScaleBitmap(peekPath)
                 mainHandler.post { 
                     if (!isDestroyed) {
@@ -388,6 +407,9 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
     }
 
     override fun onDraw(canvas: Canvas) {
+        // Limpiar el fondo con un color negro base para evitar remanentes o parpadeos
+        canvas.drawColor(Color.BLACK)
+        
         canvas.save()
         if (isParallaxEnabled) {
             canvas.translate(smoothOffsetX, smoothOffsetY)
@@ -398,14 +420,18 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
         val screenH = frame.height().toFloat()
         
         if (!isVideo) {
-            if (isAnimating && previousBitmap != null) {
+            val curr = currentBitmap
+            val prev = previousBitmap
+            if (isAnimating && prev != null && !prev.isRecycled) {
                 paint.alpha = 255
-                drawBitmapCentered(canvas, previousBitmap!!, screenW, screenH)
-                paint.alpha = fadeAlpha
-                drawBitmapCentered(canvas, currentBitmap!!, screenW, screenH)
-            } else if (currentBitmap != null) {
+                drawBitmapCentered(canvas, prev, screenW, screenH)
+                if (curr != null && !curr.isRecycled) {
+                    paint.alpha = fadeAlpha
+                    drawBitmapCentered(canvas, curr, screenW, screenH)
+                }
+            } else if (curr != null && !curr.isRecycled) {
                 paint.alpha = 255
-                drawBitmapCentered(canvas, currentBitmap!!, screenW, screenH)
+                drawBitmapCentered(canvas, curr, screenW, screenH)
             }
         }
         canvas.restore()
@@ -433,23 +459,46 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
         Choreographer.getInstance().removeFrameCallback(frameCallback)
         clearBitmaps()
         releaseMediaPlayer()
+        bgExecutor.shutdown()
     }
 
     override fun onTrimMemory(level: Int) {
         if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
-            nextPreloadedBitmap?.recycle()
+            val pre = nextPreloadedBitmap
+            val prev = previousBitmap
+            
             nextPreloadedBitmap = null
             preloadedPath = null
-            previousBitmap?.recycle()
             previousBitmap = null
+            
+            if (pre != null && !pre.isRecycled && pre !== currentBitmap) {
+                pre.recycle()
+            }
+            if (prev != null && !prev.isRecycled && prev !== currentBitmap) {
+                prev.recycle()
+            }
         }
     }
 
     private fun clearBitmaps() {
-        previousBitmap?.recycle(); previousBitmap = null
-        currentBitmap?.recycle(); currentBitmap = null
-        nextPreloadedBitmap?.recycle(); nextPreloadedBitmap = null
+        val prev = previousBitmap
+        val curr = currentBitmap
+        val pre = nextPreloadedBitmap
+        
+        previousBitmap = null
+        currentBitmap = null
+        nextPreloadedBitmap = null
         preloadedPath = null
+        
+        if (prev != null && !prev.isRecycled) {
+            prev.recycle()
+        }
+        if (curr != null && !curr.isRecycled && curr !== prev) {
+            curr.recycle()
+        }
+        if (pre != null && !pre.isRecycled && pre !== curr && pre !== prev) {
+            pre.recycle()
+        }
     }
 
     private fun calculateInSampleSize(options: BitmapFactory.Options, rw: Int, rh: Int): Int {

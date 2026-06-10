@@ -153,6 +153,7 @@ class MainActivity: FlutterActivity() {
                     val isParallaxEnabled = call.argument<Boolean>("isParallaxEnabled") ?: false
                     val carouselChangeMode = call.argument<String>("carouselChangeMode") ?: "on_visibility"
                     val carouselChangeInterval = call.argument<Int>("carouselChangeInterval") ?: 60
+                    val isHalfFpsEnabled = call.argument<Boolean>("isHalfFpsEnabled") ?: false
                     
                     editor.putBoolean("changeOnVisible", changeOnVisible)
                         .putBoolean("useDayNightMode", useDayNightMode)
@@ -167,6 +168,7 @@ class MainActivity: FlutterActivity() {
                         .putBoolean("isParallaxEnabled", isParallaxEnabled)
                         .putString("carousel_change_mode", carouselChangeMode)
                         .putInt("carousel_change_interval", carouselChangeInterval)
+                        .putBoolean("isHalfFpsEnabled", isHalfFpsEnabled)
                         .commit()
                     
                     val intent = Intent(IxekenWallpaperService.ACTION_SETTINGS_CHANGED)
@@ -214,6 +216,9 @@ class MainActivity: FlutterActivity() {
                     } catch (e: Exception) {
                         result.error("CLEAR_ERROR", e.message, null)
                     }
+                }
+                "getAppDirectory" -> {
+                    result.success(filesDir.absolutePath)
                 }
                 else -> {
                     result.notImplemented()
