@@ -92,6 +92,13 @@ class IxekenWallpaperService : WallpaperService() {
                 "vaporwave" -> VaporwaveWallpaperEngine(this@IxekenWallpaperService)
                 "conway" -> ConwayWallpaperEngine(this@IxekenWallpaperService)
                 "fluids" -> FluidSwarmWallpaperEngine(this@IxekenWallpaperService)
+                "voronoi" -> VoronoiWallpaperEngine(this@IxekenWallpaperService)
+                "waveforms" -> WaveformsWallpaperEngine(this@IxekenWallpaperService)
+                "boids" -> BoidsWallpaperEngine(this@IxekenWallpaperService)
+                "julia" -> JuliaWallpaperEngine(this@IxekenWallpaperService)
+                "sakura" -> SakuraWallpaperEngine(this@IxekenWallpaperService)
+                "pachinko" -> PachinkoWallpaperEngine(this@IxekenWallpaperService)
+                "kaleidoscope" -> KaleidoscopeWallpaperEngine(this@IxekenWallpaperService)
                 else -> CarouselWallpaperEngine(this@IxekenWallpaperService)
             }
             

@@ -12,6 +12,7 @@ class GalleryTab extends StatelessWidget {
   final Map<String, String> engineDescriptions;
   final ValueChanged<String> onSearchQueryChanged;
   final ValueChanged<String> onSelectEngine;
+  final String juliaColorScheme;
 
   const GalleryTab({
     super.key,
@@ -23,6 +24,7 @@ class GalleryTab extends StatelessWidget {
     required this.engineDescriptions,
     required this.onSearchQueryChanged,
     required this.onSelectEngine,
+    required this.juliaColorScheme,
   });
 
   @override
@@ -141,6 +143,7 @@ class GalleryTab extends StatelessWidget {
               dimIntensity: 0.43,
               tetrisStyle: tetrisStyle,
               playlist: combinedPlaylist,
+              juliaColorScheme: juliaColorScheme,
             ),
           ),
           Positioned.fill(

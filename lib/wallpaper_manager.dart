@@ -36,6 +36,7 @@ class WallpaperManager {
     String carouselChangeMode = 'on_visibility',
     int carouselChangeInterval = 60,
     bool isHalfFpsEnabled = false,
+    String juliaColorScheme = 'cosmic',
   }) async {
     try {
       final bool result = await _channel.invokeMethod('updateSettings', {
@@ -53,6 +54,7 @@ class WallpaperManager {
         'carouselChangeMode': carouselChangeMode,
         'carouselChangeInterval': carouselChangeInterval,
         'isHalfFpsEnabled': isHalfFpsEnabled,
+        'juliaColorScheme': juliaColorScheme,
       });
       return result;
     } on PlatformException catch (e) {

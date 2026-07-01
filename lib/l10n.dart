@@ -9,7 +9,7 @@ class L10n {
     return Localizations.of<L10n>(context, L10n) ?? L10n(const Locale('es'));
   }
 
-  static const _localizedValues = {
+  static const Map<String, Map<String, String>> _localizedValues = {
     'es': {
       'app_title': 'Ixeken Live Wallpaper',
       'tab_adjust': 'Ajustar',
@@ -112,18 +112,32 @@ class L10n {
       'engine_conway': 'Juego de la Vida',
       'engine_fluids': 'Enjambre Fluido',
       'engine_carousel': 'Carrusel de Medios',
+      'engine_voronoi': 'Constelación Voronoi',
+      'engine_waveforms': 'Osciloscopio Synthwave',
+      'engine_boids': 'Simulación de Boids',
+      'engine_julia': 'Fractal de Julia',
+      'engine_sakura': 'Sakura Zen',
+      'engine_pachinko': 'Pachinko de Neón',
+      'engine_kaleidoscope': 'Caleidoscopio Giroscópico',
       
       // Engine Descriptions
       'desc_particles': 'Partículas suaves que flotan por la pantalla con un comportamiento fluido y reaccionan al toque del usuario.',
       'desc_matrix': 'Lluvia de caracteres digitales al estilo Matrix cayendo verticalmente, con velocidad e intensidad aleatorias.',
       'desc_plexus': 'Nodos interconectados que forman constelaciones flotantes. Las líneas se conectan por proximidad y responden al toque.',
       'desc_liquid': 'Un fondo dinámico de esferas líquidas en movimiento continuo con gradientes de color suaves y transiciones orgánicas.',
-      'desc_tetris': 'Revive el clásico con un sistema que juega automáticamente. Las piezas buscan huecos inteligentemente para completar líneas y mantener el tablero limpio.',
-      'desc_starfield': 'Vuela a través de un campo de estrellas en tres dimensiones. El efecto reacciona dinámicamente al toque acelerando la velocidad.',
-      'desc_vaporwave': 'Un atardecer retro de los años 80 con una cuadrícula tridimensional en movimiento y un cielo estrellado de neón.',
-      'desc_conway': 'El autómata celular de Conway ejecutándose de forma infinita. Las células nacen y mueren siguiendo reglas simples.',
-      'desc_fluids': 'Un fluido de partículas físicas interactivas que siguen vectores de fuerza dinámicos y responden al cursor táctil.',
-      'desc_carousel': 'Muestra un carrusel de tus fotos y videos preferidos con transiciones suaves y personalizables.',
+      'desc_tetris': 'Relive el clásico con un sistema que juega automáticamente. Las piezas buscan huecos de forma inteligente para completar líneas.',
+      'desc_starfield': 'Vuela a través de un campo de estrellas tridimensional. El efecto reacciona dinámicamente al toque acelerando la velocidad.',
+      'desc_vaporwave': 'Un atardecer retro de los 80 con una rejilla tridimensional en movimiento y un cielo estrellado de neón.',
+      'desc_conway': 'El Juego de la Vida de Conway ejecutándose infinitamente. Las células nacen y mueren siguiendo reglas simples.',
+      'desc_fluids': 'Un fluido de partículas físicas interactivas que siguen vectores de fuerza dinámicos y responden al tacto.',
+      'desc_carousel': 'Muestra un carrusel con tus fotos y videos favoritos con transiciones suaves y personalizables.',
+      'desc_voronoi': 'Malla geométrica dinámica que calcula diagramas de Voronoi y celdas de color interactivas al tacto.',
+      'desc_waveforms': 'Ondas senoidales y cosenoidales complejas que oscilan y se entrelazan de forma tridimensional sobre neón.',
+      'desc_boids': 'Simulación física de comportamiento colectivo de bandadas de aves o peces que evitan obstáculos y siguen al dedo.',
+      'desc_julia': 'Exploración matemática interactiva del conjunto fractal de Julia mutable en tiempo real con arrastre táctil.',
+      'desc_sakura': 'Árboles de cerezo generados procedimentalmente con caída física de pétalos mecidos por el viento del giroscopio.',
+      'desc_pachinko': 'Caída y colisión física 2D de canicas de luz neón sobre postes geométricos fijos con vibraciones hápticas.',
+      'desc_kaleidoscope': 'Formas geométricas reflejadas en secciones radiales simétricas virtuales que giran con el giroscopio.',
     },
     'en': {
       'app_title': 'Ixeken Live Wallpaper',
@@ -227,6 +241,13 @@ class L10n {
       'engine_conway': 'Game of Life',
       'engine_fluids': 'Fluid Swarm',
       'engine_carousel': 'Media Carousel',
+      'engine_voronoi': 'Voronoi Constellation',
+      'engine_waveforms': 'Synthwave Oscilloscope',
+      'engine_boids': 'Boids Flocking',
+      'engine_julia': 'Julia Set Fractal',
+      'engine_sakura': 'Sakura Zen',
+      'engine_pachinko': 'Neon Pachinko',
+      'engine_kaleidoscope': 'Gyroscopic Kaleidoscope',
       
       // Engine Descriptions
       'desc_particles': 'Soft particles floating across the screen with a fluid behavior that react to user touch.',
@@ -239,6 +260,13 @@ class L10n {
       'desc_conway': 'Conway\'s Game of Life running infinitely. Cells are born and die following simple rules.',
       'desc_fluids': 'A fluid of interactive physical particles that follow dynamic force vectors and respond to touch.',
       'desc_carousel': 'Shows a carousel of your favorite photos and videos with smooth and customizable transitions.',
+      'desc_voronoi': 'Dynamic geometric mesh calculating Voronoi diagrams and interactive colored cells on touch.',
+      'desc_waveforms': 'Complex sine and cosine waves oscillating and interlocking in 3D neon space.',
+      'desc_boids': 'Physical flocking simulation of birds or fish that avoid obstacles and follow your touch.',
+      'desc_julia': 'Interactive mathematical exploration of the morphing Julia Set fractal in real time with touch drag.',
+      'desc_sakura': 'Procedurally generated cherry blossom trees with physics-based falling petals swayed by gyroscopic wind.',
+      'desc_pachinko': '2D physics-based falling and collision of neon marbles over fixed circular pins with micro-haptic ticks.',
+      'desc_kaleidoscope': 'Reflected geometric shapes in virtual symmetric radial sections that rotate with the gyroscope.',
     }
   };
 
@@ -353,6 +381,13 @@ class L10n {
   String get engineConway => get('engine_conway');
   String get engineFluids => get('engine_fluids');
   String get engineCarousel => get('engine_carousel');
+  String get engineVoronoi => get('engine_voronoi');
+  String get engineWaveforms => get('engine_waveforms');
+  String get engineBoids => get('engine_boids');
+  String get engineJulia => get('engine_julia');
+  String get engineSakura => get('engine_sakura');
+  String get enginePachinko => get('engine_pachinko');
+  String get engineKaleidoscope => get('engine_kaleidoscope');
   
   // Engine Descriptions
   String get descParticles => get('desc_particles');
@@ -365,6 +400,13 @@ class L10n {
   String get descConway => get('desc_conway');
   String get descFluids => get('desc_fluids');
   String get descCarousel => get('desc_carousel');
+  String get descVoronoi => get('desc_voronoi');
+  String get descWaveforms => get('desc_waveforms');
+  String get descBoids => get('desc_boids');
+  String get descJulia => get('desc_julia');
+  String get descSakura => get('desc_sakura');
+  String get descPachinko => get('desc_pachinko');
+  String get descKaleidoscope => get('desc_kaleidoscope');
 
   String skippedFiles(int count) => get('skipped_files').replaceAll('{}', count.toString());
 }

@@ -154,6 +154,7 @@ class MainActivity: FlutterActivity() {
                     val carouselChangeMode = call.argument<String>("carouselChangeMode") ?: "on_visibility"
                     val carouselChangeInterval = call.argument<Int>("carouselChangeInterval") ?: 60
                     val isHalfFpsEnabled = call.argument<Boolean>("isHalfFpsEnabled") ?: false
+                    val juliaColorScheme = call.argument<String>("juliaColorScheme") ?: "cosmic"
                     
                     editor.putBoolean("changeOnVisible", changeOnVisible)
                         .putBoolean("useDayNightMode", useDayNightMode)
@@ -169,6 +170,7 @@ class MainActivity: FlutterActivity() {
                         .putString("carousel_change_mode", carouselChangeMode)
                         .putInt("carousel_change_interval", carouselChangeInterval)
                         .putBoolean("isHalfFpsEnabled", isHalfFpsEnabled)
+                        .putString("julia_color_scheme", juliaColorScheme)
                         .commit()
                     
                     val intent = Intent(IxekenWallpaperService.ACTION_SETTINGS_CHANGED)
