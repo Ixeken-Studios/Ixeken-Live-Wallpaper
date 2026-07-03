@@ -10,6 +10,7 @@ class LiveWallpaperPreview extends StatefulWidget {
   final double dimIntensity;
   final String tetrisStyle;
   final List<String>? playlist;
+  final bool isAnimActive;
   
   const LiveWallpaperPreview({
     super.key, 
@@ -18,6 +19,7 @@ class LiveWallpaperPreview extends StatefulWidget {
     required this.dimIntensity,
     required this.tetrisStyle,
     this.playlist,
+    this.isAnimActive = true,
   });
 
   @override
@@ -68,7 +70,10 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 20))..repeat();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 20));
+    if (widget.isAnimActive) {
+      _controller.repeat();
+    }
     
     _initParticles();
     _initPlexus();
@@ -78,13 +83,15 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
     _initConway();
     _initFluids();
     
-    _controller.addListener(() {
-      _animateTetris();
-      _animateStarfield();
-      _animateConway();
-      _animateFluids();
-      _animateVaporwave();
-    });
+    if (widget.isAnimActive) {
+      _controller.addListener(() {
+        _animateTetris();
+        _animateStarfield();
+        _animateConway();
+        _animateFluids();
+        _animateVaporwave();
+      });
+    }
   }
 
   void _initParticles() {

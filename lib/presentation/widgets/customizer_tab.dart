@@ -44,6 +44,8 @@ class CustomizerTab extends StatelessWidget {
   final VoidCallback onRestoreDefault;
   final ValueChanged<String> onTetrisStyleChanged;
 
+  final bool isDetailView;
+
   const CustomizerTab({
     super.key,
     required this.selectedEngine,
@@ -82,6 +84,7 @@ class CustomizerTab extends StatelessWidget {
     required this.onApplySettings,
     required this.onRestoreDefault,
     required this.onTetrisStyleChanged,
+    this.isDetailView = false,
   });
 
   @override
@@ -104,7 +107,7 @@ class CustomizerTab extends StatelessWidget {
                 width: 200,
                 height: 350,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(32),
                   border: Border.all(
                     color: primaryColor.withValues(alpha: 0.3),
                     width: 2,
@@ -118,21 +121,24 @@ class CustomizerTab extends StatelessWidget {
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(26),
+                  borderRadius: BorderRadius.circular(30),
                   child: LiveWallpaperPreview(
                     engineId: selectedEngine,
                     isDimEnabled: isDimEnabled,
                     dimIntensity: dimIntensity,
                     tetrisStyle: tetrisStyle,
                     playlist: playlist,
+                    isAnimActive: true,
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              l.activeWallpaper(engines[selectedEngine] ?? selectedEngine),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              isDetailView 
+                  ? (engines[selectedEngine] ?? selectedEngine)
+                  : l.activeWallpaper(engines[selectedEngine] ?? selectedEngine),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -153,34 +159,36 @@ class CustomizerTab extends StatelessWidget {
             ] else ...[
               _buildGenericControls(context),
             ],
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onApplySettings,
-                label: Text(l.btnApplySystem),
-                icon: const Icon(Icons.wallpaper),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            if (!isDetailView) ...[
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: onApplySettings,
+                  label: Text(l.btnApplySystem),
+                  icon: const Icon(Icons.wallpaper),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onRestoreDefault,
-                label: Text(l.btnRestoreDefault),
-                icon: const Icon(Icons.delete_forever_outlined),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.redAccent,
-                  side: const BorderSide(color: Colors.redAccent),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onRestoreDefault,
+                  label: Text(l.btnRestoreDefault),
+                  icon: const Icon(Icons.delete_forever_outlined),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
                 ),
               ),
-            ),
+            ],
             const SizedBox(height: 120),
           ],
         ),
@@ -500,56 +508,46 @@ class CustomizerTab extends StatelessWidget {
         ),
         _buildSwitchCard(
           context: context,
-          title: l.optSyncTheme,
-          subtitle: l.optSyncThemeSub,
-          icon: Icons.brightness_auto_outlined,
-          value: syncWithSystemTheme,
-          onChanged: onSyncThemeChanged,
+          title: l.optDayNight,
+          subtitle: l.optDayNightSub,
+          icon: Icons.wb_twilight_outlined,
+          value: useDayNightMode,
+          onChanged: onDayNightModeChanged,
         ),
-        if (!syncWithSystemTheme) ...[
-          _buildSwitchCard(
-            context: context,
-            title: l.optDayNight,
-            subtitle: l.optDayNightSub,
-            icon: Icons.wb_twilight_outlined,
-            value: useDayNightMode,
-            onChanged: onDayNightModeChanged,
-          ),
-          if (useDayNightMode) ...[
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ActionChip(
-                      avatar: const Icon(Icons.wb_sunny_outlined, size: 16),
-                      label: Text('${l.dayLabel}: $dayStartHour:00'),
-                      onPressed: () async {
-                        final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: dayStartHour, minute: 0));
-                        if (time != null) {
-                          onDayStartHourChanged(time.hour);
-                        }
-                      },
-                    ),
+        if (useDayNightMode) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ActionChip(
+                    avatar: const Icon(Icons.wb_sunny_outlined, size: 16),
+                    label: Text('${l.dayLabel}: $dayStartHour:00'),
+                    onPressed: () async {
+                      final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: dayStartHour, minute: 0));
+                      if (time != null) {
+                        onDayStartHourChanged(time.hour);
+                      }
+                    },
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ActionChip(
-                      avatar: const Icon(Icons.nightlight_outlined, size: 16),
-                      label: Text('${l.nightLabel}: $nightStartHour:00'),
-                      onPressed: () async {
-                        final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: nightStartHour, minute: 0));
-                        if (time != null) {
-                          onNightStartHourChanged(time.hour);
-                        }
-                      },
-                    ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ActionChip(
+                    avatar: const Icon(Icons.nightlight_outlined, size: 16),
+                    label: Text('${l.nightLabel}: $nightStartHour:00'),
+                    onPressed: () async {
+                      final time = await showTimePicker(context: context, initialTime: TimeOfDay(hour: nightStartHour, minute: 0));
+                      if (time != null) {
+                        onNightStartHourChanged(time.hour);
+                      }
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ],
         const SizedBox(height: 8),
         _buildDropdownCard<String>(

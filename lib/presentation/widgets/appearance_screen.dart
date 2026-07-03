@@ -8,6 +8,8 @@ class AppearanceScreen extends StatefulWidget {
   final ValueChanged<String> onAppThemeModeChanged;
   final String currentFont;
   final ValueChanged<String> onFontChanged;
+  final int fontSizeIndex;
+  final ValueChanged<int> onFontSizeIndexChanged;
 
   const AppearanceScreen({
     super.key,
@@ -15,6 +17,8 @@ class AppearanceScreen extends StatefulWidget {
     required this.onAppThemeModeChanged,
     required this.currentFont,
     required this.onFontChanged,
+    required this.fontSizeIndex,
+    required this.onFontSizeIndexChanged,
   });
 
   @override
@@ -24,12 +28,6 @@ class AppearanceScreen extends StatefulWidget {
 class _AppearanceScreenState extends State<AppearanceScreen> {
   double _fontWeight = 400.0;
   double _letterSpacing = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    // Default weights
-  }
 
   void _showVariationsSheet() {
     final l = L10n.of(context);
@@ -42,7 +40,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
       enableDrag: true,
       constraints: const BoxConstraints(maxWidth: 600),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -152,88 +150,141 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
     );
   }
 
-  Widget _buildSegmentedSelector<T>({
-    required List<T> options,
-    required T selectedValue,
-    required String Function(T) labelBuilder,
-    required ValueChanged<T> onSelected,
+  Widget _buildGridButton({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final selectedIndex = options.indexOf(selectedValue);
-    final count = options.length;
+    final secondaryColor = Theme.of(context).cardColor; // Secondary
 
-    // alignX calculation: from -1.0 to 1.0
-    final alignX = count > 1 ? -1.0 + (2.0 * selectedIndex) / (count - 1) : 0.0;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.black26 : Colors.black.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
-        ),
-      ),
-      padding: const EdgeInsets.all(4),
-      height: 52,
-      child: Stack(
-        children: [
-          // Sliding active pill
-          AnimatedAlign(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.fastOutSlowIn,
-            alignment: Alignment(alignX, 0.0),
-            child: FractionallySizedBox(
-              widthFactor: 1 / count,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white12 : primaryColor,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      if (!isDark)
-                        BoxShadow(
-                          color: primaryColor.withValues(alpha: 0.2),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: isSelected ? primaryColor : secondaryColor,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: primaryColor.withValues(alpha: 0.15),
+              width: 1,
             ),
           ),
-          // Interactive Texts
-          Row(
-            children: options.map((option) {
-              final isSelected = option == selectedValue;
-              return Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    onSelected(option);
-                  },
-                  child: Center(
-                    child: AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 200),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: isSelected
-                            ? (isDark ? Colors.white : Colors.white)
-                            : (isDark ? Colors.white54 : Colors.black54),
-                      ),
-                      child: Text(labelBuilder(option)),
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? secondaryColor : primaryColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildThemeGrid() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            _buildGridButton(
+              label: 'Ixeken light',
+              isSelected: widget.appThemeMode == 'ixeken_light',
+              onTap: () => widget.onAppThemeModeChanged('ixeken_light'),
+            ),
+            const SizedBox(width: 8),
+            _buildGridButton(
+              label: 'Ixeken dark',
+              isSelected: widget.appThemeMode == 'ixeken_dark',
+              onTap: () => widget.onAppThemeModeChanged('ixeken_dark'),
+            ),
+            const SizedBox(width: 8),
+            _buildGridButton(
+              label: 'Cherry',
+              isSelected: widget.appThemeMode == 'cherry',
+              onTap: () => widget.onAppThemeModeChanged('cherry'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _buildGridButton(
+              label: 'Amoled',
+              isSelected: widget.appThemeMode == 'amoled',
+              onTap: () => widget.onAppThemeModeChanged('amoled'),
+            ),
+            const SizedBox(width: 8),
+            _buildGridButton(
+              label: 'Elegance',
+              isSelected: widget.appThemeMode == 'elegance',
+              onTap: () => widget.onAppThemeModeChanged('elegance'),
+            ),
+            const SizedBox(width: 8),
+            _buildGridButton(
+              label: 'Earthy',
+              isSelected: widget.appThemeMode == 'earthy',
+              onTap: () => widget.onAppThemeModeChanged('earthy'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFontGrid() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            _buildGridButton(
+              label: 'System',
+              isSelected: widget.currentFont == 'system',
+              onTap: () => widget.onFontChanged('system'),
+            ),
+            const SizedBox(width: 8),
+            _buildGridButton(
+              label: 'Inter',
+              isSelected: widget.currentFont == 'inter',
+              onTap: () => widget.onFontChanged('inter'),
+            ),
+            const SizedBox(width: 8),
+            _buildGridButton(
+              label: 'Rubik',
+              isSelected: widget.currentFont == 'rubik',
+              onTap: () => widget.onFontChanged('rubik'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _buildGridButton(
+              label: 'Space Grotesk',
+              isSelected: widget.currentFont == 'space_grotesk',
+              onTap: () => widget.onFontChanged('space_grotesk'),
+            ),
+            const SizedBox(width: 8),
+            _buildGridButton(
+              label: 'Ubuntu',
+              isSelected: widget.currentFont == 'ubuntu',
+              onTap: () => widget.onFontChanged('ubuntu'),
+            ),
+            const SizedBox(width: 8),
+            _buildGridButton(
+              label: 'GS Sans Flex',
+              isSelected: widget.currentFont == 'gs_sans_flex' || widget.currentFont == 'gs_flex',
+              onTap: () => widget.onFontChanged('gs_sans_flex'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -277,7 +328,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                                   : Colors.black.withValues(alpha: 0.05),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.dark_mode_outlined, color: primaryColor),
+                            child: Icon(Icons.brush_outlined, color: primaryColor),
                           ),
                           const SizedBox(width: 16),
                           Text(
@@ -287,16 +338,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _buildSegmentedSelector<String>(
-                        options: const ['system', 'light', 'dark'],
-                        selectedValue: widget.appThemeMode,
-                        labelBuilder: (val) {
-                          if (val == 'system') return l.themeOptSystem;
-                          if (val == 'light') return l.themeOptLight;
-                          return l.themeOptDark;
-                        },
-                        onSelected: widget.onAppThemeModeChanged,
-                      ),
+                      _buildThemeGrid(),
                     ],
                   ),
                 ),
@@ -320,7 +362,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                                   : Colors.black.withValues(alpha: 0.05),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.font_download_outlined, color: primaryColor),
+                            child: Icon(Icons.text_fields_outlined, color: primaryColor),
                           ),
                           const SizedBox(width: 16),
                           Text(
@@ -330,17 +372,8 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _buildSegmentedSelector<String>(
-                        options: const ['system', 'gs_flex', 'nunito'],
-                        selectedValue: widget.currentFont,
-                        labelBuilder: (val) {
-                          if (val == 'system') return l.fontOptSystem;
-                          if (val == 'gs_flex') return 'GS Flex';
-                          return 'Nunito';
-                        },
-                        onSelected: widget.onFontChanged,
-                      ),
-                      if (widget.currentFont == 'gs_flex') ...[
+                      _buildFontGrid(),
+                      if (widget.currentFont == 'gs_sans_flex' || widget.currentFont == 'gs_flex') ...[
                         const SizedBox(height: 16),
                         SizedBox(
                           width: double.infinity,
@@ -355,6 +388,87 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                           ),
                         ),
                       ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                color: cardColor,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: isDark 
+                                  ? Colors.white.withValues(alpha: 0.08) 
+                                  : Colors.black.withValues(alpha: 0.05),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.format_size_outlined, color: primaryColor),
+                          ),
+                          const SizedBox(width: 16),
+                          const Text(
+                            'Font Size',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          activeTrackColor: primaryColor,
+                          inactiveTrackColor: primaryColor.withValues(alpha: 0.2),
+                          thumbColor: primaryColor,
+                          tickMarkShape: const RoundSliderTickMarkShape(tickMarkRadius: 4),
+                          activeTickMarkColor: primaryColor,
+                          inactiveTickMarkColor: primaryColor.withValues(alpha: 0.4),
+                        ),
+                        child: Slider(
+                          value: widget.fontSizeIndex.toDouble(),
+                          min: 0,
+                          max: 8,
+                          divisions: 8,
+                          onChanged: (val) {
+                            HapticFeedback.selectionClick();
+                            widget.onFontSizeIndexChanged(val.round());
+                          },
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: List.generate(9, (index) {
+                            final isMiddle = index == 4;
+                            return Text(
+                              isMiddle ? '|' : '•',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: isMiddle ? FontWeight.bold : FontWeight.normal,
+                                color: primaryColor.withValues(alpha: 0.6),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Center(
+                        child: Text(
+                          'Default',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: primaryColor.withValues(alpha: 0.6),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

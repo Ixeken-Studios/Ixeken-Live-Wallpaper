@@ -16,6 +16,6 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     // Verify that our initial tab title is displayed (English default in tests).
-    expect(find.text('Adjust Active Wallpaper'), findsOneWidget);
+    expect(find.text('Wallpaper Library'), findsOneWidget);
   });
 }

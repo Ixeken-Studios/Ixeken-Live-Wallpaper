@@ -13,21 +13,142 @@ import 'presentation/widgets/gallery_tab.dart';
 import 'presentation/widgets/settings_tab.dart';
 import 'presentation/widgets/permissions_sheet.dart';
 import 'presentation/widgets/appearance_screen.dart';
+import 'presentation/widgets/wallpaper_detail_screen.dart';
 import 'dart:io';
 
 // Paletas de Diseño
-const Color kLavenderHaze = Color(0xFF92A9E1);
-const Color kSoftGraphite = Color(0xFF222222);
-const Color kSoftGraphiteCard = Color(0xFF2C2C2E);
-const Color kLavenderAccent = Color(0xFF728FCE);
-
-const Color kVanillaCloud = Color(0xFFFDF8F2);
-const Color kVanillaCloudCard = Color(0xFFF4EDE4);
-const Color kStreamBlue = Color(0xFF1E56CD);
-const Color kStreamBlueAccent = Color(0xFF16429E);
-
-final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.system);
+final ValueNotifier<String> themeStyleNotifier = ValueNotifier('ixeken_dark');
 final ValueNotifier<String> fontFamilyNotifier = ValueNotifier('system');
+final ValueNotifier<int> fontSizeIndexNotifier = ValueNotifier(4);
+
+ThemeData buildThemeData(String themeStyle, String fontFamily, int fontSizeIndex) {
+  Color primary;
+  Color secondary;
+  Color background;
+  
+  switch (themeStyle) {
+    case 'ixeken_light':
+      primary = const Color(0xFF003171);
+      secondary = const Color(0xFFF3F4F4);
+      background = const Color(0xFFD6E8FF);
+      break;
+    case 'cherry':
+      primary = const Color(0xFF7B0D1E);
+      secondary = const Color(0xFFF8E5EE);
+      background = const Color(0xFFE2B4C3);
+      break;
+    case 'earthy':
+      primary = const Color(0xFF6A994E);
+      secondary = const Color(0xFFFFFCF2);
+      background = const Color(0xFFF0F4E8);
+      break;
+    case 'amoled':
+      primary = const Color(0xFFF3F4F4);
+      secondary = const Color(0xFF1C1C1E);
+      background = const Color(0xFF000000);
+      break;
+    case 'elegance':
+      primary = const Color(0xFFE5E5E5);
+      secondary = const Color(0xFF3D348B);
+      background = const Color(0xFF000000);
+      break;
+    case 'ixeken_dark':
+    default:
+      primary = const Color(0xFFF3F4F4);
+      secondary = const Color(0xFF003171);
+      background = const Color(0xFF001229);
+      break;
+  }
+
+  final isLightTheme = themeStyle == 'ixeken_light' || themeStyle == 'cherry' || themeStyle == 'earthy';
+  final brightness = isLightTheme ? Brightness.light : Brightness.dark;
+
+  TextTheme textTheme;
+  switch (fontFamily) {
+    case 'inter':
+      textTheme = GoogleFonts.interTextTheme();
+      break;
+    case 'rubik':
+      textTheme = GoogleFonts.rubikTextTheme();
+      break;
+    case 'space_grotesk':
+      textTheme = GoogleFonts.spaceGroteskTextTheme();
+      break;
+    case 'ubuntu':
+      textTheme = GoogleFonts.ubuntuTextTheme();
+      break;
+    case 'gs_sans_flex':
+    case 'gs_flex':
+      textTheme = GoogleFonts.outfitTextTheme();
+      break;
+    case 'system':
+    default:
+      textTheme = GoogleFonts.nunitoTextTheme().copyWith(
+        displayLarge: GoogleFonts.outfit(),
+        displayMedium: GoogleFonts.outfit(),
+        displaySmall: GoogleFonts.outfit(),
+        headlineLarge: GoogleFonts.outfit(),
+        headlineMedium: GoogleFonts.outfit(),
+        headlineSmall: GoogleFonts.outfit(),
+        titleLarge: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        titleMedium: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        titleSmall: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+      );
+      break;
+  }
+
+  final double fontSizeFactor = 0.8 + (fontSizeIndex * 0.05);
+  textTheme = textTheme.apply(
+    fontSizeFactor: fontSizeFactor,
+    bodyColor: isLightTheme ? Colors.black87 : Colors.white,
+    displayColor: isLightTheme ? Colors.black87 : Colors.white,
+  );
+
+  final colorScheme = ColorScheme.fromSeed(
+    seedColor: primary,
+    brightness: brightness,
+  ).copyWith(
+    surface: background,
+    primary: primary,
+    secondary: secondary,
+    onSurface: isLightTheme ? Colors.black87 : Colors.white,
+  );
+
+  return ThemeData(
+    brightness: brightness,
+    primaryColor: primary,
+    scaffoldBackgroundColor: background,
+    useMaterial3: true,
+    colorScheme: colorScheme,
+    cardColor: secondary,
+    dividerColor: isLightTheme ? Colors.black12 : Colors.white12,
+    textTheme: textTheme,
+    cardTheme: CardThemeData(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(32),
+        side: BorderSide(
+          color: colorScheme.onSurface.withValues(alpha: 0.05),
+          width: 1,
+        ),
+      ),
+      elevation: 0,
+    ),
+    switchTheme: SwitchThemeData(
+      trackColor: WidgetStateProperty.resolveWith<Color?>((states) {
+        if (states.contains(WidgetState.selected)) {
+          return primary.withValues(alpha: 0.5);
+        }
+        return null;
+      }),
+      thumbColor: WidgetStateProperty.resolveWith<Color?>((states) {
+        if (states.contains(WidgetState.selected)) {
+          return primary;
+        }
+        return null;
+      }),
+    ),
+  );
+}
 
 void main() {
   runApp(const IxekenApp());
@@ -38,73 +159,19 @@ class IxekenApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DynamicColorBuilder(
-      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        return ValueListenableBuilder<ThemeMode>(
-          valueListenable: themeModeNotifier,
-          builder: (context, currentMode, child) {
-            return ValueListenableBuilder<String>(
-              valueListenable: fontFamilyNotifier,
-              builder: (context, currentFont, child) {
-                ColorScheme lightColorScheme;
-                ColorScheme darkColorScheme;
-
-                if (lightDynamic != null && darkDynamic != null) {
-                  lightColorScheme = lightDynamic;
-                  darkColorScheme = darkDynamic;
-                } else {
-                  lightColorScheme = ColorScheme.fromSeed(
-                    seedColor: kStreamBlue,
-                    brightness: Brightness.light,
-                  ).copyWith(
-                    surface: kVanillaCloud,
-                    primary: kStreamBlue,
-                    secondary: kStreamBlueAccent,
-                  );
-                  darkColorScheme = ColorScheme.fromSeed(
-                    seedColor: kLavenderHaze,
-                    brightness: Brightness.dark,
-                  ).copyWith(
-                    surface: kSoftGraphite,
-                    primary: kLavenderHaze,
-                    secondary: kLavenderAccent,
-                  );
-                }
-
-                final textTheme = currentFont == 'nunito'
-                    ? GoogleFonts.nunitoTextTheme()
-                    : currentFont == 'gs_flex'
-                        ? GoogleFonts.outfitTextTheme()
-                        : GoogleFonts.nunitoTextTheme().copyWith(
-                            displayLarge: GoogleFonts.outfit(),
-                            displayMedium: GoogleFonts.outfit(),
-                            displaySmall: GoogleFonts.outfit(),
-                            headlineLarge: GoogleFonts.outfit(),
-                            headlineMedium: GoogleFonts.outfit(),
-                            headlineSmall: GoogleFonts.outfit(),
-                            titleLarge: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-                            titleMedium: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-                            titleSmall: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-                          );
-
-                final cardColorLight = lightDynamic != null 
-                    ? lightColorScheme.surfaceContainerLow 
-                    : kVanillaCloudCard;
-                final cardColorDark = darkDynamic != null 
-                    ? darkColorScheme.surfaceContainerLow 
-                    : kSoftGraphiteCard;
-
-                final scaffoldBgLight = lightDynamic != null 
-                    ? lightColorScheme.surface 
-                    : kVanillaCloud;
-                final scaffoldBgDark = darkDynamic != null 
-                    ? darkColorScheme.surface 
-                    : kSoftGraphite;
-
+    return ValueListenableBuilder<String>(
+      valueListenable: themeStyleNotifier,
+      builder: (context, currentStyle, child) {
+        return ValueListenableBuilder<String>(
+          valueListenable: fontFamilyNotifier,
+          builder: (context, currentFont, child) {
+            return ValueListenableBuilder<int>(
+              valueListenable: fontSizeIndexNotifier,
+              builder: (context, currentIndex, child) {
+                final theme = buildThemeData(currentStyle, currentFont, currentIndex);
                 return MaterialApp(
                   onGenerateTitle: (context) => L10n.of(context).appTitle,
                   debugShowCheckedModeBanner: false,
-                  themeMode: currentMode,
                   localizationsDelegates: const [
                     L10nDelegate(),
                     GlobalMaterialLocalizations.delegate,
@@ -115,46 +182,7 @@ class IxekenApp extends StatelessWidget {
                     Locale('es'),
                     Locale('en'),
                   ],
-                  theme: ThemeData(
-                    brightness: Brightness.light,
-                    primaryColor: lightColorScheme.primary,
-                    scaffoldBackgroundColor: scaffoldBgLight,
-                    useMaterial3: true,
-                    colorScheme: lightColorScheme,
-                    cardColor: cardColorLight,
-                    dividerColor: Colors.black12,
-                    textTheme: textTheme,
-                    cardTheme: CardThemeData(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(28),
-                        side: BorderSide(
-                          color: lightColorScheme.onSurface.withValues(alpha: 0.05),
-                          width: 1,
-                        ),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
-                  darkTheme: ThemeData(
-                    brightness: Brightness.dark,
-                    primaryColor: darkColorScheme.primary,
-                    scaffoldBackgroundColor: scaffoldBgDark,
-                    useMaterial3: true,
-                    colorScheme: darkColorScheme,
-                    cardColor: cardColorDark,
-                    dividerColor: Colors.white12,
-                    textTheme: textTheme,
-                    cardTheme: CardThemeData(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(28),
-                        side: BorderSide(
-                          color: darkColorScheme.onSurface.withValues(alpha: 0.05),
-                          width: 1,
-                        ),
-                      ),
-                      elevation: 0,
-                    ),
-                  ),
+                  theme: theme,
                   home: const HomePage(),
                 );
               },
@@ -251,7 +279,8 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadPersistedData() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedMode = prefs.getString('app_theme_mode') ?? 'system';
+    final savedMode = prefs.getString('app_theme_mode') ?? 'ixeken_dark';
+    final savedFontSizeIndex = prefs.getInt('app_font_size_index') ?? 4;
     setState(() {
       _playlistGeneral = prefs.getStringList('playlist_general') ?? [];
       _playlistDay = prefs.getStringList('playlist_day') ?? [];
@@ -271,15 +300,9 @@ class _HomePageState extends State<HomePage> {
       _appThemeMode = savedMode;
       _isHalfFpsEnabled = prefs.getBool('is_half_fps') ?? false;
       fontFamilyNotifier.value = prefs.getString('app_font_family') ?? 'system';
+      themeStyleNotifier.value = savedMode;
+      fontSizeIndexNotifier.value = savedFontSizeIndex;
     });
-
-    if (savedMode == 'light') {
-      themeModeNotifier.value = ThemeMode.light;
-    } else if (savedMode == 'dark') {
-      themeModeNotifier.value = ThemeMode.dark;
-    } else {
-      themeModeNotifier.value = ThemeMode.system;
-    }
   }
 
   Future<void> _savePersistedData() async {
@@ -302,6 +325,7 @@ class _HomePageState extends State<HomePage> {
     await prefs.setString('app_theme_mode', _appThemeMode);
     await prefs.setBool('is_half_fps', _isHalfFpsEnabled);
     await prefs.setString('app_font_family', fontFamilyNotifier.value);
+    await prefs.setInt('app_font_size_index', fontSizeIndexNotifier.value);
   }
 
   Future<void> _pickFiles(String type) async {
@@ -387,9 +411,9 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: Text(
           _currentTab == 0
-              ? l.titleAdjust
+              ? l.titleLibrary
               : _currentTab == 1
-                  ? l.titleLibrary
+                  ? l.titleAdjust
                   : l.titleOptions,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
@@ -401,9 +425,106 @@ class _HomePageState extends State<HomePage> {
       // Align reports as 0) to compute available body space.
       body: Stack(
         children: [
-          IndexedStack(
+           IndexedStack(
             index: _currentTab,
             children: [
+              GalleryTab(
+                searchQuery: _searchQuery,
+                selectedEngine: _selectedEngine,
+                tetrisStyle: _tetrisStyle,
+                combinedPlaylist: _getCombinedPlaylist(),
+                engines: getEngines(context),
+                engineDescriptions: getEngineDescriptions(context),
+                onSearchQueryChanged: (val) {
+                  setState(() => _searchQuery = val);
+                },
+                onSelectEngine: (engineId) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => WallpaperDetailScreen(
+                        engineId: engineId,
+                        isDimEnabled: _isDimEnabled,
+                        dimIntensity: _dimIntensity,
+                        tetrisStyle: _tetrisStyle,
+                        playlist: _getCombinedPlaylist(),
+                        engines: getEngines(context),
+                        engineDescriptions: getEngineDescriptions(context),
+                        syncWithSystemTheme: _syncWithSystemTheme,
+                        useDayNightMode: _useDayNightMode,
+                        dayStartHour: _dayStartHour,
+                        nightStartHour: _nightStartHour,
+                        isParallaxEnabled: _isParallaxEnabled,
+                        isRandom: _isRandom,
+                        carouselChangeMode: _carouselChangeMode,
+                        carouselChangeInterval: _carouselChangeInterval,
+                        isHalfFpsEnabled: _isHalfFpsEnabled,
+                        playlistGeneral: _playlistGeneral,
+                        playlistDay: _playlistDay,
+                        playlistNight: _playlistNight,
+                        onDimEnabledChanged: (val) {
+                          setState(() => _isDimEnabled = val);
+                          _savePersistedData();
+                        },
+                        onDimIntensityChanged: (val) {
+                          setState(() => _dimIntensity = val);
+                        },
+                        onDimIntensityChangeEnd: (val) async {
+                          await _savePersistedData();
+                        },
+                        onParallaxEnabledChanged: (val) {
+                          setState(() => _isParallaxEnabled = val);
+                          _savePersistedData();
+                        },
+                        onRandomChanged: (val) {
+                          setState(() => _isRandom = val);
+                          _savePersistedData();
+                        },
+                        onSyncThemeChanged: (val) {
+                          setState(() {
+                            _syncWithSystemTheme = val;
+                            if (val) _useDayNightMode = false;
+                          });
+                          _savePersistedData();
+                        },
+                        onDayNightModeChanged: (val) {
+                          setState(() => _useDayNightMode = val);
+                          _savePersistedData();
+                        },
+                        onDayStartHourChanged: (val) {
+                          setState(() => _dayStartHour = val);
+                          _savePersistedData();
+                        },
+                        onNightStartHourChanged: (val) {
+                          setState(() => _nightStartHour = val);
+                          _savePersistedData();
+                        },
+                        onCarouselChangeModeChanged: (val) async {
+                          setState(() => _carouselChangeMode = val);
+                          await _savePersistedData();
+                        },
+                        onCarouselChangeIntervalChanged: (val) async {
+                          setState(() => _carouselChangeInterval = val);
+                          await _savePersistedData();
+                        },
+                        onHalfFpsEnabledChanged: (val) {
+                          setState(() => _isHalfFpsEnabled = val);
+                          _savePersistedData();
+                        },
+                        onPickFiles: (type) => _pickFiles(type),
+                        onRemoveFile: (type, path) => _removeFileFromPlaylist(type, path),
+                        onApplyEngine: (id) async {
+                          setState(() {
+                            _selectedEngine = id;
+                          });
+                          await _savePersistedData();
+                          await _applySettings();
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
               CustomizerTab(
                 selectedEngine: _selectedEngine,
                 isDimEnabled: _isDimEnabled,
@@ -531,40 +652,6 @@ class _HomePageState extends State<HomePage> {
                   _savePersistedData();
                 },
               ),
-              GalleryTab(
-                searchQuery: _searchQuery,
-                selectedEngine: _selectedEngine,
-                tetrisStyle: _tetrisStyle,
-                combinedPlaylist: _getCombinedPlaylist(),
-                engines: getEngines(context),
-                engineDescriptions: getEngineDescriptions(context),
-                onSearchQueryChanged: (val) {
-                  setState(() => _searchQuery = val);
-                },
-                onSelectEngine: (engineId) async {
-                  setState(() {
-                    _selectedEngine = engineId;
-                  });
-                  await _savePersistedData();
-                  await WallpaperManager.updateSettings(
-                    changeOnVisible: false,
-                    useDayNightMode: _useDayNightMode,
-                    dayStartHour: _dayStartHour,
-                    nightStartHour: _nightStartHour,
-                    isDimEnabled: _isDimEnabled,
-                    dimIntensity: _dimIntensity,
-                    selectedEngine: _selectedEngine,
-                    isRandom: _isRandom,
-                    tetrisStyle: _tetrisStyle,
-                    syncWithSystemTheme: _syncWithSystemTheme,
-                    isParallaxEnabled: _isParallaxEnabled,
-                    carouselChangeMode: _carouselChangeMode,
-                    carouselChangeInterval: _carouselChangeInterval,
-                    isHalfFpsEnabled: _isHalfFpsEnabled,
-                  );
-                  await WallpaperManager.openWallpaperPicker();
-                },
-              ),
               SettingsTab(
                 onShowAppearance: () {
                   Navigator.push(
@@ -576,18 +663,17 @@ class _HomePageState extends State<HomePage> {
                           setState(() {
                             _appThemeMode = val;
                           });
-                          if (val == 'light') {
-                            themeModeNotifier.value = ThemeMode.light;
-                          } else if (val == 'dark') {
-                            themeModeNotifier.value = ThemeMode.dark;
-                          } else {
-                            themeModeNotifier.value = ThemeMode.system;
-                          }
+                          themeStyleNotifier.value = val;
                           await _savePersistedData();
                         },
                         currentFont: fontFamilyNotifier.value,
                         onFontChanged: (val) async {
                           fontFamilyNotifier.value = val;
+                          await _savePersistedData();
+                        },
+                        fontSizeIndex: fontSizeIndexNotifier.value,
+                        onFontSizeIndexChanged: (val) async {
+                          fontSizeIndexNotifier.value = val;
                           await _savePersistedData();
                         },
                       ),
@@ -611,8 +697,8 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildFloatingNavigationBar() {
     final l = L10n.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final secondaryColor = Theme.of(context).cardColor; // Secondary
 
     return SafeArea(
       top: false,
@@ -623,15 +709,15 @@ class _HomePageState extends State<HomePage> {
           margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24, top: 8),
           height: 72,
           decoration: BoxDecoration(
-            color: isDark ? Colors.black.withValues(alpha: 0.85) : Theme.of(context).cardColor.withValues(alpha: 0.95),
+            color: secondaryColor,
             borderRadius: BorderRadius.circular(36),
             border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.08),
+              color: primaryColor.withValues(alpha: 0.08),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 16,
                 spreadRadius: 2,
                 offset: const Offset(0, 8),
@@ -651,12 +737,8 @@ class _HomePageState extends State<HomePage> {
                       width: 90,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: primaryColor.withValues(alpha: 0.12),
+                        color: primaryColor,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: primaryColor.withValues(alpha: 0.15),
-                          width: 1.5,
-                        ),
                       ),
                     ),
                   ),
@@ -665,9 +747,9 @@ class _HomePageState extends State<HomePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Expanded(child: _buildNavItem(0, Icons.edit_note_outlined, l.tabAdjust)),
-                  Expanded(child: _buildNavItem(1, Icons.collections_outlined, l.tabLibrary)),
-                  Expanded(child: _buildNavItem(2, Icons.settings_outlined, l.tabOptions)),
+                  Expanded(child: _buildNavItem(0, Icons.bar_chart_outlined, l.tabLibrary)),
+                  Expanded(child: _buildNavItem(1, Icons.home_outlined, l.tabAdjust)),
+                  Expanded(child: _buildNavItem(2, Icons.tune_outlined, l.tabOptions)),
                 ],
               ),
             ],
@@ -679,11 +761,11 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _currentTab == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
+    final secondaryColor = Theme.of(context).cardColor;
     final color = isSelected 
-        ? primaryColor 
-        : (isDark ? Colors.white60 : Colors.black45);
+        ? secondaryColor 
+        : primaryColor;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -758,7 +840,7 @@ class _HomePageState extends State<HomePage> {
       enableDrag: true,
       constraints: const BoxConstraints(maxWidth: 600),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       clipBehavior: Clip.antiAlias,
       builder: (context) {
