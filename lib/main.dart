@@ -196,7 +196,6 @@ class _HomePageState extends State<HomePage> {
   int _carouselChangeInterval = 60;
   String _appThemeMode = 'system';
   bool _isHalfFpsEnabled = false;
-  String _juliaColorScheme = 'cosmic';
 
   Map<String, String> getEngines(BuildContext context) {
     final l = L10n.of(context);
@@ -211,13 +210,6 @@ class _HomePageState extends State<HomePage> {
       'vaporwave': '${l.engineVaporwave} 🌅',
       'conway': '${l.engineConway} 🦠',
       'fluids': '${l.engineFluids} 💨',
-      'voronoi': '${l.engineVoronoi} 📐',
-      'waveforms': '${l.engineWaveforms} 📈',
-      'boids': '${l.engineBoids} 🐦',
-      'julia': '${l.engineJulia} 🌀',
-      'sakura': '${l.engineSakura} 🌸',
-      'pachinko': '${l.enginePachinko} 🎳',
-      'kaleidoscope': '${l.engineKaleidoscope} 🔮',
     };
   }
 
@@ -234,13 +226,6 @@ class _HomePageState extends State<HomePage> {
       'vaporwave': l.descVaporwave,
       'conway': l.descConway,
       'fluids': l.descFluids,
-      'voronoi': l.descVoronoi,
-      'waveforms': l.descWaveforms,
-      'boids': l.descBoids,
-      'julia': l.descJulia,
-      'sakura': l.descSakura,
-      'pachinko': l.descPachinko,
-      'kaleidoscope': l.descKaleidoscope,
     };
   }
 
@@ -285,7 +270,6 @@ class _HomePageState extends State<HomePage> {
       _carouselChangeInterval = prefs.getInt('carousel_change_interval') ?? 60;
       _appThemeMode = savedMode;
       _isHalfFpsEnabled = prefs.getBool('is_half_fps') ?? false;
-      _juliaColorScheme = prefs.getString('julia_color_scheme') ?? 'cosmic';
       fontFamilyNotifier.value = prefs.getString('app_font_family') ?? 'system';
     });
 
@@ -317,7 +301,6 @@ class _HomePageState extends State<HomePage> {
     await prefs.setInt('carousel_change_interval', _carouselChangeInterval);
     await prefs.setString('app_theme_mode', _appThemeMode);
     await prefs.setBool('is_half_fps', _isHalfFpsEnabled);
-    await prefs.setString('julia_color_scheme', _juliaColorScheme);
     await prefs.setString('app_font_family', fontFamilyNotifier.value);
   }
 
@@ -385,7 +368,6 @@ class _HomePageState extends State<HomePage> {
       carouselChangeMode: _carouselChangeMode,
       carouselChangeInterval: _carouselChangeInterval,
       isHalfFpsEnabled: _isHalfFpsEnabled,
-      juliaColorScheme: _juliaColorScheme,
     );
 
     await WallpaperManager.openWallpaperPicker();
@@ -442,11 +424,6 @@ class _HomePageState extends State<HomePage> {
                 playlistGeneral: _playlistGeneral,
                 playlistDay: _playlistDay,
                 playlistNight: _playlistNight,
-                juliaColorScheme: _juliaColorScheme,
-                onJuliaColorSchemeChanged: (val) {
-                  setState(() => _juliaColorScheme = val);
-                  _savePersistedData();
-                },
                 onDimEnabledChanged: (val) {
                   setState(() => _isDimEnabled = val);
                   _savePersistedData();
@@ -502,7 +479,6 @@ class _HomePageState extends State<HomePage> {
                     carouselChangeMode: _carouselChangeMode,
                     carouselChangeInterval: _carouselChangeInterval,
                     isHalfFpsEnabled: _isHalfFpsEnabled,
-                    juliaColorScheme: _juliaColorScheme,
                   );
                 },
                 onCarouselChangeIntervalChanged: (val) async {
@@ -523,7 +499,6 @@ class _HomePageState extends State<HomePage> {
                     carouselChangeMode: _carouselChangeMode,
                     carouselChangeInterval: _carouselChangeInterval,
                     isHalfFpsEnabled: _isHalfFpsEnabled,
-                    juliaColorScheme: _juliaColorScheme,
                   );
                 },
                 onHalfFpsEnabledChanged: (val) {
@@ -556,14 +531,13 @@ class _HomePageState extends State<HomePage> {
                   _savePersistedData();
                 },
               ),
-               GalleryTab(
+              GalleryTab(
                 searchQuery: _searchQuery,
                 selectedEngine: _selectedEngine,
                 tetrisStyle: _tetrisStyle,
                 combinedPlaylist: _getCombinedPlaylist(),
                 engines: getEngines(context),
                 engineDescriptions: getEngineDescriptions(context),
-                juliaColorScheme: _juliaColorScheme,
                 onSearchQueryChanged: (val) {
                   setState(() => _searchQuery = val);
                 },
@@ -587,7 +561,6 @@ class _HomePageState extends State<HomePage> {
                     carouselChangeMode: _carouselChangeMode,
                     carouselChangeInterval: _carouselChangeInterval,
                     isHalfFpsEnabled: _isHalfFpsEnabled,
-                    juliaColorScheme: _juliaColorScheme,
                   );
                   await WallpaperManager.openWallpaperPicker();
                 },

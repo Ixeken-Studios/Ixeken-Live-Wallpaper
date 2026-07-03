@@ -10,7 +10,6 @@ class LiveWallpaperPreview extends StatefulWidget {
   final double dimIntensity;
   final String tetrisStyle;
   final List<String>? playlist;
-  final String juliaColorScheme;
   
   const LiveWallpaperPreview({
     super.key, 
@@ -19,11 +18,7 @@ class LiveWallpaperPreview extends StatefulWidget {
     required this.dimIntensity,
     required this.tetrisStyle,
     this.playlist,
-    this.juliaColorScheme = 'cosmic',
   });
-
-  @override
-  void paint(BuildContext context) {}
 
   @override
   State<LiveWallpaperPreview> createState() => _LiveWallpaperPreviewState();
@@ -70,19 +65,6 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
     [[1, 1, 0], [0, 1, 1]], // Z
   ];
 
-  // 7 New Wallpapers State
-  final List<VoronoiPoint> _voronoiPoints = [];
-  final List<Boid> _boids = [];
-  double _juliaCx = -0.7;
-  double _juliaCy = 0.27015;
-  final List<SakuraPetal> _sakuraPetals = [];
-  double _windX = 0.0;
-  final List<PachinkoBall> _pachinkoBalls = [];
-  final List<PachinkoPin> _pachinkoPins = [];
-  final List<PachinkoSpark> _pachinkoSparks = [];
-  final List<KaleidoscopeItem> _kaleidoscopeItems = [];
-  double _gyroAngle = 0.0;
-
   @override
   void initState() {
     super.initState();
@@ -95,11 +77,6 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
     _initStars();
     _initConway();
     _initFluids();
-    _initVoronoi();
-    _initBoids();
-    _initSakura();
-    _initPachinko();
-    _initKaleidoscope();
     
     _controller.addListener(() {
       _animateTetris();
@@ -107,12 +84,6 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
       _animateConway();
       _animateFluids();
       _animateVaporwave();
-      _animateVoronoi();
-      _animateBoids();
-      _animateSakura();
-      _animatePachinko();
-      _animateKaleidoscope();
-      _animateJulia();
     });
   }
 
@@ -394,291 +365,6 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
     });
   }
 
-  void _initVoronoi() {
-    final rand = math.Random();
-    final colors = [
-      const Color(0xFF6366F1),
-      const Color(0xFFEC4899),
-      const Color(0xFF06B6D4),
-      const Color(0xFF8B5CF6),
-    ];
-    for (int i = 0; i < 12; i++) {
-      _voronoiPoints.add(VoronoiPoint(
-        x: rand.nextDouble() * 200,
-        y: rand.nextDouble() * 350,
-        vx: (rand.nextDouble() - 0.5) * 1.5,
-        vy: (rand.nextDouble() - 0.5) * 1.5,
-        color: colors[rand.nextInt(colors.length)],
-      ));
-    }
-  }
-
-  void _animateVoronoi() {
-    if (!mounted || widget.engineId != 'voronoi') return;
-    setState(() {
-      for (var p in _voronoiPoints) {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < 0 || p.x > 200) p.vx *= -1;
-        if (p.y < 0 || p.y > 350) p.vy *= -1;
-      }
-    });
-  }
-
-  void _initBoids() {
-    final rand = math.Random();
-    _boids.clear();
-    for (int i = 0; i < 45; i++) {
-      _boids.add(Boid(
-        x: rand.nextDouble() * 200,
-        y: rand.nextDouble() * 350,
-        vx: (rand.nextDouble() - 0.5) * 4,
-        vy: (rand.nextDouble() - 0.5) * 4,
-      ));
-    }
-  }
-
-  void _animateBoids() {
-    if (!mounted || widget.engineId != 'boids') return;
-    final rand = math.Random();
-    setState(() {
-      for (var b in _boids) {
-        b.history.add(Offset(b.x, b.y));
-        if (b.history.length > 8) b.history.removeAt(0);
-
-        double avgX = 0;
-        double avgY = 0;
-        double avgVx = 0;
-        double avgVy = 0;
-        int count = 0;
-
-        for (var other in _boids) {
-          if (other != b) {
-            final dist = math.sqrt((b.x - other.x) * (b.x - other.x) + (b.y - other.y) * (b.y - other.y));
-            if (dist < 40.0) {
-              avgX += other.x;
-              avgY += other.y;
-              avgVx += other.vx;
-              avgVy += other.vy;
-              count++;
-            }
-          }
-        }
-
-        if (count > 0) {
-          avgX /= count;
-          avgY /= count;
-          avgVx /= count;
-          avgVy /= count;
-
-          b.vx += (avgX - b.x) * 0.002;
-          b.vy += (avgY - b.y) * 0.002;
-          b.vx += (avgVx - b.vx) * 0.015;
-          b.vy += (avgVy - b.vy) * 0.015;
-        }
-
-        b.vx += (rand.nextDouble() - 0.5) * 0.45;
-        b.vy += (rand.nextDouble() - 0.5) * 0.45;
-
-        if (b.x < 15) b.vx += 0.35;
-        if (b.x > 185) b.vx -= 0.35;
-        if (b.y < 15) b.vy += 0.35;
-        if (b.y > 335) b.vy -= 0.35;
-
-        final speed = math.sqrt(b.vx * b.vx + b.vy * b.vy);
-        if (speed > 5.5) {
-          b.vx = (b.vx / speed) * 5.5;
-          b.vy = (b.vy / speed) * 5.5;
-        } else if (speed < 1.5) {
-          b.vx = (b.vx / speed) * 2.0;
-          b.vy = (b.vy / speed) * 2.0;
-        }
-
-        b.x += b.vx;
-        b.y += b.vy;
-      }
-    });
-  }
-
-  void _initSakura() {
-    final rand = math.Random();
-    for (int i = 0; i < 20; i++) {
-      _sakuraPetals.add(SakuraPetal(
-        x: rand.nextDouble() * 200,
-        y: rand.nextDouble() * 350,
-        size: rand.nextDouble() * 3.5 + 2.0,
-        speedY: rand.nextDouble() * 0.8 + 0.6,
-        speedX: (rand.nextDouble() - 0.5) * 0.5,
-        angle: rand.nextDouble() * 2 * math.pi,
-        rotateSpeed: (rand.nextDouble() - 0.5) * 0.05,
-      ));
-    }
-  }
-
-  void _animateSakura() {
-    if (!mounted || widget.engineId != 'sakura') return;
-    setState(() {
-      for (var p in _sakuraPetals) {
-        p.y += p.speedY;
-        p.x += p.speedX + _windX;
-        p.angle += p.rotateSpeed;
-
-        if (p.y > 350) {
-          final rand = math.Random();
-          p.y = -10;
-          p.x = rand.nextDouble() * 200;
-        }
-        if (p.x < -10) p.x = 210;
-        if (p.x > 210) p.x = -10;
-      }
-      _windX = _windX * 0.95 + 0.05 * math.sin(_controller.value * 2 * math.pi) * 0.5;
-    });
-  }
-
-  void _initPachinko() {
-    _pachinkoPins.clear();
-    for (int row = 0; row < 9; row++) {
-      final y = 60.0 + row * 32.0;
-      final pinsInRow = 6 + (row % 2);
-      final spacing = 200.0 / (pinsInRow + 1);
-      for (int col = 0; col < pinsInRow; col++) {
-        _pachinkoPins.add(PachinkoPin(x: spacing * (col + 1), y: y, radius: 4.5));
-      }
-    }
-  }
-
-  void _animatePachinko() {
-    if (!mounted || widget.engineId != 'pachinko') return;
-    final rand = math.Random();
-    
-    if (rand.nextDouble() < 0.04 && _pachinkoBalls.length < 8) {
-      final colors = [const Color(0xFF38BDF8), const Color(0xFFF43F5E), const Color(0xFF10B981)];
-      _pachinkoBalls.add(PachinkoBall(
-        x: 60.0 + rand.nextDouble() * 80.0,
-        y: 10,
-        vx: (rand.nextDouble() - 0.5) * 1.0,
-        vy: 1.0,
-        color: colors[rand.nextInt(colors.length)],
-      ));
-    }
-
-    setState(() {
-      // 1. Actualizar física de canicas
-      for (int i = _pachinkoBalls.length - 1; i >= 0; i--) {
-        final b = _pachinkoBalls[i];
-        b.vy += 0.12;
-        b.x += b.vx;
-        b.y += b.vy;
-
-        for (var pin in _pachinkoPins) {
-          final dx = b.x - pin.x;
-          final dy = b.y - pin.y;
-          final distSq = dx * dx + dy * dy;
-          final radiusSum = pin.radius + 6.0;
-          if (distSq < radiusSum * radiusSum) {
-            final dist = math.sqrt(distSq);
-            b.x = pin.x + (dx / dist) * radiusSum;
-            b.y = pin.y + (dy / dist) * radiusSum;
-
-            final nx = dx / dist;
-            final ny = dy / dist;
-            final dot = b.vx * nx + b.vy * ny;
-            b.vx = (b.vx - 2 * dot * nx) * 0.65;
-            b.vy = (b.vy - 2 * dot * ny) * 0.65;
-            b.vx += (rand.nextDouble() - 0.5) * 0.4;
-
-            for (int k = 0; k < 4; k++) {
-              final angle = rand.nextDouble() * 2 * math.pi;
-              final speed = rand.nextDouble() * 1.5 + 0.5;
-              _pachinkoSparks.add(PachinkoSpark(
-                x: pin.x + nx * radiusSum,
-                y: pin.y + ny * radiusSum,
-                vx: math.cos(angle) * speed,
-                vy: math.sin(angle) * speed - 0.5,
-                alpha: 1.0,
-                color: b.color,
-              ));
-            }
-          }
-        }
-
-        if (b.x < 8) { b.x = 8; b.vx *= -0.7; }
-        if (b.x > 192) { b.x = 192; b.vx *= -0.7; }
-
-        if (b.y > 360) {
-          _pachinkoBalls.removeAt(i);
-        }
-      }
-
-      // 2. Actualizar física de chispas
-      for (int i = _pachinkoSparks.length - 1; i >= 0; i--) {
-        final s = _pachinkoSparks[i];
-        s.x += s.vx;
-        s.y += s.vy;
-        s.vy += 0.04; // gravedad de la chispa
-        s.alpha -= 0.05; // desvanecimiento gradual
-        if (s.alpha <= 0) {
-          _pachinkoSparks.removeAt(i);
-        }
-      }
-    });
-  }
-
-  void _initKaleidoscope() {
-    final rand = math.Random();
-    final colors = [
-      const Color(0xFFF43F5E),
-      const Color(0xFF3B82F6),
-      const Color(0xFF10B981),
-      const Color(0xFFF59E0B),
-      const Color(0xFF8B5CF6),
-    ];
-    for (int i = 0; i < 24; i++) {
-      _kaleidoscopeItems.add(KaleidoscopeItem(
-        radius: rand.nextDouble() * 150.0 + 10.0,
-        angle: rand.nextDouble() * (2 * math.pi / 8.0),
-        size: rand.nextDouble() * 12.0 + 4.0,
-        speedRadius: (rand.nextDouble() - 0.5) * 0.6,
-        speedAngle: (rand.nextDouble() - 0.5) * 0.005,
-        color: colors[rand.nextInt(colors.length)],
-        type: rand.nextInt(3),
-      ));
-    }
-  }
-
-  void _animateKaleidoscope() {
-    if (!mounted || widget.engineId != 'kaleidoscope') return;
-    setState(() {
-      const sectorAngle = 2 * math.pi / 8.0;
-      for (var item in _kaleidoscopeItems) {
-        item.radius += item.speedRadius;
-        item.angle += item.speedAngle;
-
-        if (item.radius < 5.0 || item.radius > 170.0) {
-          item.speedRadius *= -1.0;
-        }
-
-        if (item.angle < 0) {
-          item.angle = 0;
-          item.speedAngle *= -1.0;
-        } else if (item.angle > sectorAngle) {
-          item.angle = sectorAngle;
-          item.speedAngle *= -1.0;
-        }
-      }
-      _gyroAngle = math.sin(_controller.value * 2 * math.pi) * 0.25;
-    });
-  }
-
-  void _animateJulia() {
-    if (!mounted || widget.engineId != 'julia') return;
-    setState(() {
-      final angle = _controller.value * 2 * math.pi;
-      _juliaCx = -0.7 + 0.12 * math.sin(angle);
-      _juliaCy = 0.27015 + 0.08 * math.cos(angle * 2.0);
-    });
-  }
-
   void _handleTapDown(TapDownDetails details) {
     final pos = details.localPosition;
     if (widget.engineId == 'conway') {
@@ -694,36 +380,6 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
     } else if (widget.engineId == 'fluids') {
       setState(() {
         _touchPos = pos;
-      });
-    } else if (widget.engineId == 'julia') {
-      // Julia reacciona automáticamente ahora, touch ignorado o ripple sutil
-    } else if (widget.engineId == 'sakura') {
-      setState(() {
-        _windX = 2.0;
-      });
-    } else if (widget.engineId == 'pachinko') {
-      final colors = [const Color(0xFF38BDF8), const Color(0xFFF43F5E), const Color(0xFF10B981)];
-      final rand = math.Random();
-      setState(() {
-        _pachinkoBalls.add(PachinkoBall(
-          x: pos.dx,
-          y: pos.dy,
-          vx: (rand.nextDouble() - 0.5) * 1.5,
-          vy: -1.0,
-          color: colors[rand.nextInt(colors.length)],
-        ));
-      });
-    } else if (widget.engineId == 'voronoi') {
-      setState(() {
-        for (var p in _voronoiPoints) {
-          final dx = p.x - pos.dx;
-          final dy = p.y - pos.dy;
-          final dist = math.sqrt(dx*dx + dy*dy);
-          if (dist < 100.0) {
-            p.vx = (dx / dist) * 2.5;
-            p.vy = (dy / dist) * 2.5;
-          }
-        }
       });
     }
   }
@@ -741,23 +397,6 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
       final gy = (pos.dy / cellH).toInt().clamp(0, 49);
       setState(() {
         _conwayGrid[gy][gx] = true;
-      });
-    } else if (widget.engineId == 'julia') {
-      setState(() {
-        _juliaCx = (pos.dx / 200.0) * 2.0 - 1.0;
-        _juliaCy = (pos.dy / 350.0) * 3.0 - 1.5;
-      });
-    } else if (widget.engineId == 'boids') {
-      setState(() {
-        for (var b in _boids) {
-          final dx = pos.dx - b.x;
-          final dy = pos.dy - b.y;
-          final dist = math.sqrt(dx*dx + dy*dy);
-          if (dist > 1.0 && dist < 120.0) {
-            b.vx += (dx / dist) * 0.4;
-            b.vy += (dy / dist) * 0.4;
-          }
-        }
       });
     }
   }
@@ -875,27 +514,6 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
             case 'fluids':
               painter = FluidSwarmPainter(_fluidParticles);
               break;
-            case 'voronoi':
-              painter = VoronoiPainter(_voronoiPoints, _controller.value);
-              break;
-            case 'waveforms':
-              painter = WaveformsPainter(_controller.value * 2 * math.pi);
-              break;
-            case 'boids':
-              painter = BoidsPainter(_boids);
-              break;
-            case 'julia':
-              painter = JuliaPainter(cx: _juliaCx, cy: _juliaCy, time: _controller.value, colorScheme: widget.juliaColorScheme);
-              break;
-            case 'sakura':
-              painter = SakuraPainter(_sakuraPetals, _windX);
-              break;
-            case 'pachinko':
-              painter = PachinkoPainter(balls: _pachinkoBalls, pins: _pachinkoPins, sparks: _pachinkoSparks);
-              break;
-            case 'kaleidoscope':
-              painter = KaleidoscopePainter(items: _kaleidoscopeItems, gyroAngle: _gyroAngle);
-              break;
             default:
               final playlist = widget.playlist;
               if (playlist == null || playlist.isEmpty) {
@@ -930,9 +548,44 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
                 );
               }
               
-              return _CarouselPreview(
-                playlist: playlist,
-                animationValue: _controller.value,
+              final index = ((_controller.value * playlist.length).toInt()) % playlist.length;
+              final currentPath = playlist[index];
+              
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 800),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                  return Stack(
+                    fit: StackFit.expand,
+                    alignment: Alignment.center,
+                    children: <Widget>[
+                      ...previousChildren,
+                      if (currentChild != null) currentChild,
+                    ],
+                  );
+                },
+                child: Image.file(
+                  File(currentPath),
+                  key: ValueKey<String>(currentPath),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    final isVideo = currentPath.toLowerCase().endsWith('.mp4') ||
+                                    currentPath.toLowerCase().endsWith('.mov') ||
+                                    currentPath.toLowerCase().endsWith('.mkv');
+                    return Container(
+                      key: ValueKey<String>('error_$currentPath'),
+                      color: Theme.of(context).colorScheme.surface,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        isVideo ? Icons.video_collection_outlined : Icons.broken_image_outlined,
+                        size: 48,
+                        color: Colors.white54,
+                      ),
+                    );
+                  },
+                ),
               );
           }
           
@@ -954,141 +607,6 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
           );
         },
       ),
-    );
-  }
-}
-
-class _CarouselPreview extends StatefulWidget {
-  final List<String> playlist;
-  final double animationValue;
-
-  const _CarouselPreview({
-    required this.playlist,
-    required this.animationValue,
-  });
-
-  @override
-  State<_CarouselPreview> createState() => _CarouselPreviewState();
-}
-
-class _CarouselPreviewState extends State<_CarouselPreview> with SingleTickerProviderStateMixin {
-  late int _currentIndex;
-  String? _currentPath;
-  String? _prevPath;
-  bool _isNewImageLoaded = false;
-  late AnimationController _fadeController;
-
-  @override
-  void initState() {
-    super.initState();
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _currentIndex = _calculateIndex();
-    if (widget.playlist.isNotEmpty) {
-      _currentPath = widget.playlist[_currentIndex];
-    }
-    _fadeController.value = 1.0;
-  }
-
-  int _calculateIndex() {
-    if (widget.playlist.isEmpty) return 0;
-    return ((widget.animationValue * widget.playlist.length).toInt()) % widget.playlist.length;
-  }
-
-  @override
-  void didUpdateWidget(covariant _CarouselPreview oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.playlist.isEmpty) {
-      _currentPath = null;
-      _prevPath = null;
-      return;
-    }
-    final newIndex = _calculateIndex();
-    if (newIndex != _currentIndex) {
-      _prevPath = _currentPath;
-      _currentIndex = newIndex;
-      _currentPath = widget.playlist[_currentIndex];
-      _isNewImageLoaded = false;
-      _fadeController.reset();
-    }
-  }
-
-  @override
-  void dispose() {
-    _fadeController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final prev = _prevPath;
-    final curr = _currentPath;
-
-    if (curr == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (prev != null)
-          Image.file(
-            File(prev),
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-          ),
-        AnimatedBuilder(
-          animation: _fadeController,
-          builder: (context, child) {
-            return Opacity(
-              opacity: _fadeController.value,
-              child: child,
-            );
-          },
-          child: Image.file(
-            File(curr),
-            fit: BoxFit.cover,
-            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-              if (wasSynchronouslyLoaded || frame != null) {
-                if (!_isNewImageLoaded) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      setState(() {
-                        _isNewImageLoaded = true;
-                      });
-                      _fadeController.forward(from: 0.0).then((_) {
-                        if (mounted) {
-                          setState(() {
-                            _prevPath = null;
-                          });
-                        }
-                      });
-                    }
-                  });
-                }
-                return child;
-              }
-              return const SizedBox.shrink();
-            },
-            errorBuilder: (context, error, stackTrace) {
-              final isVideo = curr.toLowerCase().endsWith('.mp4') ||
-                  curr.toLowerCase().endsWith('.mov') ||
-                  curr.toLowerCase().endsWith('.mkv');
-              return Container(
-                color: Theme.of(context).colorScheme.surface,
-                alignment: Alignment.center,
-                child: Icon(
-                  isVideo ? Icons.video_collection_outlined : Icons.broken_image_outlined,
-                  size: 48,
-                  color: Colors.white54,
-                ),
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 }

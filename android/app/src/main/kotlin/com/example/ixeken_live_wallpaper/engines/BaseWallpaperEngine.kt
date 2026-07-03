@@ -34,7 +34,7 @@ abstract class BaseWallpaperEngine(protected val context: Context) : IxekenWallp
                 }
 
                 val now = System.currentTimeMillis()
-                val targetInterval = frameIntervalMs
+                val targetInterval = if (isLockScreen()) 1000L else frameIntervalMs
                 if (now - lastFrameTimeMs >= targetInterval) {
                     lastFrameTimeMs = now
                     onUpdatePhysics()

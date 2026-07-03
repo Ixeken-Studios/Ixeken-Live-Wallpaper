@@ -21,7 +21,6 @@ class CustomizerTab extends StatelessWidget {
   final String carouselChangeMode;
   final int carouselChangeInterval;
   final bool isHalfFpsEnabled;
-  final String juliaColorScheme;
   final List<String> playlistGeneral;
   final List<String> playlistDay;
   final List<String> playlistNight;
@@ -39,7 +38,6 @@ class CustomizerTab extends StatelessWidget {
   final ValueChanged<String> onCarouselChangeModeChanged;
   final ValueChanged<int> onCarouselChangeIntervalChanged;
   final ValueChanged<bool> onHalfFpsEnabledChanged;
-  final ValueChanged<String> onJuliaColorSchemeChanged;
   final Function(String) onPickFiles;
   final Function(String, String) onRemoveFile;
   final VoidCallback onApplySettings;
@@ -64,7 +62,6 @@ class CustomizerTab extends StatelessWidget {
     required this.carouselChangeMode,
     required this.carouselChangeInterval,
     required this.isHalfFpsEnabled,
-    required this.juliaColorScheme,
     required this.playlistGeneral,
     required this.playlistDay,
     required this.playlistNight,
@@ -80,7 +77,6 @@ class CustomizerTab extends StatelessWidget {
     required this.onCarouselChangeModeChanged,
     required this.onCarouselChangeIntervalChanged,
     required this.onHalfFpsEnabledChanged,
-    required this.onJuliaColorSchemeChanged,
     required this.onPickFiles,
     required this.onRemoveFile,
     required this.onApplySettings,
@@ -129,7 +125,6 @@ class CustomizerTab extends StatelessWidget {
                     dimIntensity: dimIntensity,
                     tetrisStyle: tetrisStyle,
                     playlist: playlist,
-                    juliaColorScheme: juliaColorScheme,
                   ),
                 ),
               ),
@@ -155,8 +150,6 @@ class CustomizerTab extends StatelessWidget {
               _buildCarouselControls(context),
             ] else if (selectedEngine == 'tetris') ...[
               _buildTetrisControls(context),
-            ] else if (selectedEngine == 'julia') ...[
-              _buildJuliaControls(context),
             ] else ...[
               _buildGenericControls(context),
             ],
@@ -673,34 +666,6 @@ class CustomizerTab extends StatelessWidget {
           ],
         ),
         _buildFpsControl(context),
-      ],
-    );
-  }
-
-  Widget _buildJuliaControls(BuildContext context) {
-    final items = [
-      const DropdownMenuItem(value: 'cosmic', child: Text('Cósmico (Violeta/Magenta/Cian)')),
-      const DropdownMenuItem(value: 'fire', child: Text('Fuego (Rojo/Naranja/Amarillo)')),
-      const DropdownMenuItem(value: 'matrix', child: Text('Matrix (Verde/Líquido/Oscuro)')),
-      const DropdownMenuItem(value: 'ocean', child: Text('Océano (Azul/Celeste/Verde agua)')),
-    ];
-
-    return Column(
-      children: [
-        _buildDropdownCard<String>(
-          context: context,
-          title: 'Paleta del Fractal',
-          subtitle: 'Personaliza los colores del fractal de Julia',
-          icon: Icons.palette_outlined,
-          value: juliaColorScheme,
-          items: items,
-          onChanged: (val) {
-            if (val != null) {
-              onJuliaColorSchemeChanged(val);
-            }
-          },
-        ),
-        _buildGenericControls(context),
       ],
     );
   }
