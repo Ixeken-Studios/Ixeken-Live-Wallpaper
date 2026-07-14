@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../l10n.dart';
+import 'package:image_picker/image_picker.dart';
 import 'live_wallpaper_preview.dart';
 
 class CustomizerTab extends StatelessWidget {
@@ -46,6 +47,20 @@ class CustomizerTab extends StatelessWidget {
 
   final bool isDetailView;
 
+  // Pattern Settings
+  final int patternLayoutSize;
+  final List<String> patternSlotIcons;
+  final double patternSpeed;
+  final String patternDensity;
+  final bool patternRotate;
+
+  // Pattern Callbacks
+  final ValueChanged<int> onPatternLayoutSizeChanged;
+  final Function(int, String) onPatternSlotIconChanged;
+  final ValueChanged<double> onPatternSpeedChanged;
+  final ValueChanged<String> onPatternDensityChanged;
+  final ValueChanged<bool> onPatternRotateChanged;
+
   const CustomizerTab({
     super.key,
     required this.selectedEngine,
@@ -84,6 +99,16 @@ class CustomizerTab extends StatelessWidget {
     required this.onApplySettings,
     required this.onRestoreDefault,
     required this.onTetrisStyleChanged,
+    required this.patternLayoutSize,
+    required this.patternSlotIcons,
+    required this.patternSpeed,
+    required this.patternDensity,
+    required this.patternRotate,
+    required this.onPatternLayoutSizeChanged,
+    required this.onPatternSlotIconChanged,
+    required this.onPatternSpeedChanged,
+    required this.onPatternDensityChanged,
+    required this.onPatternRotateChanged,
     this.isDetailView = false,
   });
 
@@ -129,6 +154,11 @@ class CustomizerTab extends StatelessWidget {
                     tetrisStyle: tetrisStyle,
                     playlist: playlist,
                     isAnimActive: true,
+                    patternLayoutSize: patternLayoutSize,
+                    patternSlotIcons: patternSlotIcons,
+                    patternSpeed: patternSpeed,
+                    patternDensity: patternDensity,
+                    patternRotate: patternRotate,
                   ),
                 ),
               ),
@@ -156,6 +186,8 @@ class CustomizerTab extends StatelessWidget {
               _buildCarouselControls(context),
             ] else if (selectedEngine == 'tetris') ...[
               _buildTetrisControls(context),
+            ] else if (selectedEngine == 'pattern') ...[
+              _buildPatternControls(context),
             ] else ...[
               _buildGenericControls(context),
             ],
@@ -963,6 +995,308 @@ class CustomizerTab extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPatternControls(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Diseño del Mosaico",
+          style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _buildLayoutButton(context, 1, "1x1"),
+            const SizedBox(width: 8),
+            _buildLayoutButton(context, 2, "2x2"),
+            const SizedBox(width: 8),
+            _buildLayoutButton(context, 3, "3x3"),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          "Personalizar Celdas (Toca para cambiar)",
+          style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.02),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: primaryColor.withValues(alpha: 0.15),
+              ),
+            ),
+            child: _buildGridCells(context),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          "Tamaño de los Iconos (Densidad)",
+          style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _buildDensityButton(context, "small", "Pequeño"),
+            const SizedBox(width: 8),
+            _buildDensityButton(context, "medium", "Mediano"),
+            const SizedBox(width: 8),
+            _buildDensityButton(context, "large", "Grande"),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Velocidad de Movimiento",
+              style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor, fontSize: 14),
+            ),
+            Text(
+              patternSpeed.toStringAsFixed(1),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ],
+        ),
+        Slider(
+          value: patternSpeed,
+          min: 1.0,
+          max: 5.0,
+          divisions: 4,
+          onChanged: onPatternSpeedChanged,
+        ),
+        const SizedBox(height: 12),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            "Rotación de Iconos",
+            style: TextStyle(fontWeight: FontWeight.bold, color: primaryColor, fontSize: 14),
+          ),
+          subtitle: const Text(
+            "Los iconos rotarán suavemente mientras se desplazan",
+            style: TextStyle(fontSize: 12),
+          ),
+          value: patternRotate,
+          onChanged: onPatternRotateChanged,
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildGridCells(BuildContext context) {
+    const double buttonSize = 72.0;
+    final int size = patternLayoutSize;
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(size, (r) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(size, (c) {
+            final int index = r * size + c;
+            final String iconKey = (index < patternSlotIcons.length) ? patternSlotIcons[index] : 'circle';
+            
+            return GestureDetector(
+              onTap: () => _showIconSelector(context, index),
+              child: Container(
+                width: buttonSize,
+                height: buttonSize,
+                margin: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
+                ),
+                child: Center(
+                  child: _renderSlotPreview(iconKey),
+                ),
+              ),
+            );
+          }),
+        );
+      }),
+    );
+  }
+
+  Widget _renderSlotPreview(String iconKey) {
+    if (iconKey.startsWith('/') || iconKey.contains('content://')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.file(
+          File(iconKey),
+          width: 52,
+          height: 52,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported_outlined, size: 28),
+        ),
+      );
+    }
+    
+    switch (iconKey) {
+      case 'circle':
+        return const Icon(Icons.circle_outlined, size: 30);
+      case 'square':
+        return const Icon(Icons.crop_square_outlined, size: 30);
+      case 'triangle':
+        return const Icon(Icons.change_history_outlined, size: 30);
+      case 'cross':
+        return const Icon(Icons.close_outlined, size: 30);
+      case 'star':
+        return const Icon(Icons.star_outline_rounded, size: 30);
+      case 'heart':
+      default:
+        return const Icon(Icons.favorite_border_rounded, size: 30);
+    }
+  }
+
+  void _showIconSelector(BuildContext context, int slotIndex) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Seleccionar Icono",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    child: Icon(Icons.photo_library_outlined, color: Theme.of(context).colorScheme.primary),
+                  ),
+                  title: const Text("Elegir de la Galería", style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text("Usa cualquier imagen o icono de tu biblioteca"),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final picker = ImagePicker();
+                    final XFile? file = await picker.pickImage(source: ImageSource.gallery);
+                    if (file != null) {
+                      onPatternSlotIconChanged(slotIndex, file.path);
+                    }
+                  },
+                ),
+                const Divider(height: 24),
+                const Text(
+                  "Presets Geométricos (Sin Copyright)",
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white54),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildGenericItem(context, slotIndex, "heart", Icons.favorite_border_rounded),
+                    _buildGenericItem(context, slotIndex, "star", Icons.star_outline_rounded),
+                    _buildGenericItem(context, slotIndex, "circle", Icons.circle_outlined),
+                    _buildGenericItem(context, slotIndex, "square", Icons.crop_square_outlined),
+                    _buildGenericItem(context, slotIndex, "triangle", Icons.change_history_outlined),
+                    _buildGenericItem(context, slotIndex, "cross", Icons.close_outlined),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGenericItem(BuildContext context, int slotIndex, String iconKey, IconData icon) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pop(context);
+        onPatternSlotIconChanged(slotIndex, iconKey);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)),
+        ),
+        child: Icon(icon, size: 24, color: Theme.of(context).colorScheme.primary),
+      ),
+    );
+  }
+
+  Widget _buildLayoutButton(BuildContext context, int size, String label) {
+    final bool isSelected = patternLayoutSize == size;
+    return Expanded(
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: isSelected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : Colors.transparent,
+          side: BorderSide(
+            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white24,
+            width: 1.5,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        onPressed: () => onPatternLayoutSizeChanged(size),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white60,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDensityButton(BuildContext context, String val, String label) {
+    final bool isSelected = patternDensity == val;
+    return Expanded(
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: isSelected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : Colors.transparent,
+          side: BorderSide(
+            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white24,
+            width: 1.5,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        onPressed: () => onPatternDensityChanged(val),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white60,
+          ),
+        ),
+      ),
     );
   }
 }

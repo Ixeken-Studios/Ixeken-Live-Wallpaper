@@ -97,6 +97,30 @@ ThemeData buildThemeData(String themeStyle, String fontFamily, int fontSizeIndex
       break;
   }
 
+  String? resolvedFontFamily;
+  switch (fontFamily) {
+    case 'inter':
+      resolvedFontFamily = GoogleFonts.inter().fontFamily;
+      break;
+    case 'rubik':
+      resolvedFontFamily = GoogleFonts.rubik().fontFamily;
+      break;
+    case 'space_grotesk':
+      resolvedFontFamily = GoogleFonts.spaceGrotesk().fontFamily;
+      break;
+    case 'ubuntu':
+      resolvedFontFamily = GoogleFonts.ubuntu().fontFamily;
+      break;
+    case 'gs_sans_flex':
+    case 'gs_flex':
+      resolvedFontFamily = GoogleFonts.outfit().fontFamily;
+      break;
+    case 'system':
+    default:
+      resolvedFontFamily = null;
+      break;
+  }
+
   final double fontSizeFactor = 0.8 + (fontSizeIndex * 0.05);
   textTheme = textTheme.apply(
     fontSizeFactor: fontSizeFactor,
@@ -122,6 +146,7 @@ ThemeData buildThemeData(String themeStyle, String fontFamily, int fontSizeIndex
     colorScheme: colorScheme,
     cardColor: secondary,
     dividerColor: isLightTheme ? Colors.black12 : Colors.white12,
+    fontFamily: resolvedFontFamily,
     textTheme: textTheme,
     cardTheme: CardThemeData(
       shape: RoundedRectangleBorder(
@@ -183,6 +208,16 @@ class IxekenApp extends StatelessWidget {
                     Locale('en'),
                   ],
                   theme: theme,
+                  builder: (context, child) {
+                    final mediaQueryData = MediaQuery.of(context);
+                    final double scale = 0.8 + (currentIndex * 0.05);
+                    return MediaQuery(
+                      data: mediaQueryData.copyWith(
+                        textScaler: TextScaler.linear(scale),
+                      ),
+                      child: child!,
+                    );
+                  },
                   home: const HomePage(),
                 );
               },
@@ -215,6 +250,7 @@ class _HomePageState extends State<HomePage> {
   int _dayStartHour = 6;
   int _nightStartHour = 18;
   String _selectedEngine = 'carousel';
+  String _selectedEngineLock = 'same';
   bool _syncWithSystemTheme = false;
   bool _isParallaxEnabled = false;
   int _currentTab = 0;
@@ -224,6 +260,13 @@ class _HomePageState extends State<HomePage> {
   int _carouselChangeInterval = 60;
   String _appThemeMode = 'system';
   bool _isHalfFpsEnabled = false;
+
+  // Pattern Settings
+  int _patternLayoutSize = 2;
+  List<String> _patternSlotIcons = ['circle', 'star', 'heart', 'cross'];
+  double _patternSpeed = 2.0;
+  String _patternDensity = 'medium';
+  bool _patternRotate = true;
 
   Map<String, String> getEngines(BuildContext context) {
     final l = L10n.of(context);
@@ -238,6 +281,7 @@ class _HomePageState extends State<HomePage> {
       'vaporwave': '${l.engineVaporwave} 🌅',
       'conway': '${l.engineConway} 🦠',
       'fluids': '${l.engineFluids} 💨',
+      'pattern': 'Patrón 🖼️',
     };
   }
 
@@ -254,6 +298,7 @@ class _HomePageState extends State<HomePage> {
       'vaporwave': l.descVaporwave,
       'conway': l.descConway,
       'fluids': l.descFluids,
+      'pattern': 'Mosaico de iconos personalizados desplazándose en cuadrícula diagonal',
     };
   }
 
@@ -292,6 +337,7 @@ class _HomePageState extends State<HomePage> {
       _dayStartHour = prefs.getInt('day_start') ?? 6;
       _nightStartHour = prefs.getInt('night_start') ?? 18;
       _selectedEngine = prefs.getString('selected_engine') ?? 'carousel';
+      _selectedEngineLock = prefs.getString('selected_engine_lock') ?? 'same';
       _syncWithSystemTheme = prefs.getBool('sync_with_system_theme') ?? false;
       _isParallaxEnabled = prefs.getBool('is_parallax') ?? false;
       _dimIntensity = prefs.getDouble('dim_intensity') ?? 0.43;
@@ -302,6 +348,12 @@ class _HomePageState extends State<HomePage> {
       fontFamilyNotifier.value = prefs.getString('app_font_family') ?? 'system';
       themeStyleNotifier.value = savedMode;
       fontSizeIndexNotifier.value = savedFontSizeIndex;
+
+      _patternLayoutSize = prefs.getInt('pattern_layout_size') ?? 2;
+      _patternSlotIcons = prefs.getStringList('pattern_slot_icons') ?? ['circle', 'star', 'heart', 'cross'];
+      _patternSpeed = prefs.getDouble('pattern_speed') ?? 2.0;
+      _patternDensity = prefs.getString('pattern_density') ?? 'medium';
+      _patternRotate = prefs.getBool('pattern_rotate') ?? true;
     });
   }
 
@@ -317,6 +369,7 @@ class _HomePageState extends State<HomePage> {
     await prefs.setInt('day_start', _dayStartHour);
     await prefs.setInt('night_start', _nightStartHour);
     await prefs.setString('selected_engine', _selectedEngine);
+    await prefs.setString('selected_engine_lock', _selectedEngineLock);
     await prefs.setBool('sync_with_system_theme', _syncWithSystemTheme);
     await prefs.setBool('is_parallax', _isParallaxEnabled);
     await prefs.setDouble('dim_intensity', _dimIntensity);
@@ -326,6 +379,12 @@ class _HomePageState extends State<HomePage> {
     await prefs.setBool('is_half_fps', _isHalfFpsEnabled);
     await prefs.setString('app_font_family', fontFamilyNotifier.value);
     await prefs.setInt('app_font_size_index', fontSizeIndexNotifier.value);
+
+    await prefs.setInt('pattern_layout_size', _patternLayoutSize);
+    await prefs.setStringList('pattern_slot_icons', _patternSlotIcons);
+    await prefs.setDouble('pattern_speed', _patternSpeed);
+    await prefs.setString('pattern_density', _patternDensity);
+    await prefs.setBool('pattern_rotate', _patternRotate);
   }
 
   Future<void> _pickFiles(String type) async {
@@ -392,6 +451,11 @@ class _HomePageState extends State<HomePage> {
       carouselChangeMode: _carouselChangeMode,
       carouselChangeInterval: _carouselChangeInterval,
       isHalfFpsEnabled: _isHalfFpsEnabled,
+      patternLayoutSize: _patternLayoutSize,
+      patternSlotIcons: _patternSlotIcons,
+      patternSpeed: _patternSpeed,
+      patternDensity: _patternDensity,
+      patternRotate: _patternRotate,
     );
 
     await WallpaperManager.openWallpaperPicker();
@@ -520,6 +584,44 @@ class _HomePageState extends State<HomePage> {
                           await _savePersistedData();
                           await _applySettings();
                         },
+                        onTetrisStyleChanged: (val) {
+                          setState(() => _tetrisStyle = val);
+                          _savePersistedData();
+                        },
+                        patternLayoutSize: _patternLayoutSize,
+                        patternSlotIcons: _patternSlotIcons,
+                        patternSpeed: _patternSpeed,
+                        patternDensity: _patternDensity,
+                        patternRotate: _patternRotate,
+                        onPatternLayoutSizeChanged: (val) {
+                          setState(() {
+                            _patternLayoutSize = val;
+                            // resize list
+                            final int targetLength = val * val;
+                            if (_patternSlotIcons.length < targetLength) {
+                              _patternSlotIcons.addAll(List.generate(targetLength - _patternSlotIcons.length, (_) => 'circle'));
+                            } else if (_patternSlotIcons.length > targetLength) {
+                              _patternSlotIcons = _patternSlotIcons.sublist(0, targetLength);
+                            }
+                          });
+                          _savePersistedData();
+                        },
+                        onPatternSlotIconChanged: (idx, val) {
+                          setState(() => _patternSlotIcons[idx] = val);
+                          _savePersistedData();
+                        },
+                        onPatternSpeedChanged: (val) {
+                          setState(() => _patternSpeed = val);
+                          _savePersistedData();
+                        },
+                        onPatternDensityChanged: (val) {
+                          setState(() => _patternDensity = val);
+                          _savePersistedData();
+                        },
+                        onPatternRotateChanged: (val) {
+                          setState(() => _patternRotate = val);
+                          _savePersistedData();
+                        },
                       ),
                     ),
                   );
@@ -600,6 +702,11 @@ class _HomePageState extends State<HomePage> {
                     carouselChangeMode: _carouselChangeMode,
                     carouselChangeInterval: _carouselChangeInterval,
                     isHalfFpsEnabled: _isHalfFpsEnabled,
+                    patternLayoutSize: _patternLayoutSize,
+                    patternSlotIcons: _patternSlotIcons,
+                    patternSpeed: _patternSpeed,
+                    patternDensity: _patternDensity,
+                    patternRotate: _patternRotate,
                   );
                 },
                 onCarouselChangeIntervalChanged: (val) async {
@@ -620,6 +727,11 @@ class _HomePageState extends State<HomePage> {
                     carouselChangeMode: _carouselChangeMode,
                     carouselChangeInterval: _carouselChangeInterval,
                     isHalfFpsEnabled: _isHalfFpsEnabled,
+                    patternLayoutSize: _patternLayoutSize,
+                    patternSlotIcons: _patternSlotIcons,
+                    patternSpeed: _patternSpeed,
+                    patternDensity: _patternDensity,
+                    patternRotate: _patternRotate,
                   );
                 },
                 onHalfFpsEnabledChanged: (val) {
@@ -649,6 +761,39 @@ class _HomePageState extends State<HomePage> {
                 },
                 onTetrisStyleChanged: (val) {
                   setState(() => _tetrisStyle = val);
+                  _savePersistedData();
+                },
+                patternLayoutSize: _patternLayoutSize,
+                patternSlotIcons: _patternSlotIcons,
+                patternSpeed: _patternSpeed,
+                patternDensity: _patternDensity,
+                patternRotate: _patternRotate,
+                onPatternLayoutSizeChanged: (val) {
+                  setState(() {
+                    _patternLayoutSize = val;
+                    final int targetLength = val * val;
+                    if (_patternSlotIcons.length < targetLength) {
+                      _patternSlotIcons.addAll(List.generate(targetLength - _patternSlotIcons.length, (_) => 'circle'));
+                    } else if (_patternSlotIcons.length > targetLength) {
+                      _patternSlotIcons = _patternSlotIcons.sublist(0, targetLength);
+                    }
+                  });
+                  _savePersistedData();
+                },
+                onPatternSlotIconChanged: (idx, val) {
+                  setState(() => _patternSlotIcons[idx] = val);
+                  _savePersistedData();
+                },
+                onPatternSpeedChanged: (val) {
+                  setState(() => _patternSpeed = val);
+                  _savePersistedData();
+                },
+                onPatternDensityChanged: (val) {
+                  setState(() => _patternDensity = val);
+                  _savePersistedData();
+                },
+                onPatternRotateChanged: (val) {
+                  setState(() => _patternRotate = val);
                   _savePersistedData();
                 },
               ),
@@ -681,6 +826,15 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
                 onShowPermissions: () => _showPermissionsBottomSheet(context),
+                selectedEngineLock: _selectedEngineLock,
+                onLockEngineChanged: (val) async {
+                  setState(() {
+                    _selectedEngineLock = val;
+                  });
+                  await _savePersistedData();
+                  await _applySettings(); // Notificar al servicio nativo
+                },
+                engines: getEngines(context),
               ),
             ],
           ),

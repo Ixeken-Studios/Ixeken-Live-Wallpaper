@@ -155,6 +155,12 @@ class MainActivity: FlutterActivity() {
                     val carouselChangeInterval = call.argument<Int>("carouselChangeInterval") ?: 60
                     val isHalfFpsEnabled = call.argument<Boolean>("isHalfFpsEnabled") ?: false
                     
+                    val patternLayoutSize = call.argument<Int>("patternLayoutSize") ?: 2
+                    val patternSlotIcons = call.argument<String>("patternSlotIcons") ?: "circle,star,heart,cross"
+                    val patternSpeed = call.argument<Double>("patternSpeed") ?: 2.0
+                    val patternDensity = call.argument<String>("patternDensity") ?: "medium"
+                    val patternRotate = call.argument<Boolean>("patternRotate") ?: true
+
                     editor.putBoolean("changeOnVisible", changeOnVisible)
                         .putBoolean("useDayNightMode", useDayNightMode)
                         .putInt("dayStartHour", dayStartHour)
@@ -169,6 +175,11 @@ class MainActivity: FlutterActivity() {
                         .putString("carousel_change_mode", carouselChangeMode)
                         .putInt("carousel_change_interval", carouselChangeInterval)
                         .putBoolean("isHalfFpsEnabled", isHalfFpsEnabled)
+                        .putInt("pattern_layout_size", patternLayoutSize)
+                        .putString("pattern_slot_icons", patternSlotIcons)
+                        .putInt("pattern_speed", patternSpeed.toInt())
+                        .putString("pattern_density", patternDensity)
+                        .putBoolean("pattern_rotate", patternRotate)
                         .commit()
                     
                     val intent = Intent(IxekenWallpaperService.ACTION_SETTINGS_CHANGED)

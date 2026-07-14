@@ -36,6 +36,11 @@ class WallpaperManager {
     String carouselChangeMode = 'on_visibility',
     int carouselChangeInterval = 60,
     bool isHalfFpsEnabled = false,
+    int patternLayoutSize = 2,
+    List<String> patternSlotIcons = const ['circle', 'star', 'heart', 'cross'],
+    double patternSpeed = 2.0,
+    String patternDensity = 'medium',
+    bool patternRotate = true,
   }) async {
     try {
       final bool result = await _channel.invokeMethod('updateSettings', {
@@ -53,6 +58,11 @@ class WallpaperManager {
         'carouselChangeMode': carouselChangeMode,
         'carouselChangeInterval': carouselChangeInterval,
         'isHalfFpsEnabled': isHalfFpsEnabled,
+        'patternLayoutSize': patternLayoutSize,
+        'patternSlotIcons': patternSlotIcons.join(','), // Pass as comma-separated string
+        'patternSpeed': patternSpeed,
+        'patternDensity': patternDensity,
+        'patternRotate': patternRotate,
       });
       return result;
     } on PlatformException catch (e) {

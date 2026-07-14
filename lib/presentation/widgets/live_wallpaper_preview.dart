@@ -12,6 +12,13 @@ class LiveWallpaperPreview extends StatefulWidget {
   final List<String>? playlist;
   final bool isAnimActive;
   
+  // Pattern settings
+  final int patternLayoutSize;
+  final List<String> patternSlotIcons;
+  final double patternSpeed;
+  final String patternDensity;
+  final bool patternRotate;
+  
   const LiveWallpaperPreview({
     super.key, 
     required this.engineId, 
@@ -20,6 +27,11 @@ class LiveWallpaperPreview extends StatefulWidget {
     required this.tetrisStyle,
     this.playlist,
     this.isAnimActive = true,
+    this.patternLayoutSize = 2,
+    this.patternSlotIcons = const ['circle', 'star', 'heart', 'cross'],
+    this.patternSpeed = 2.0,
+    this.patternDensity = 'medium',
+    this.patternRotate = true,
   });
 
   @override
@@ -67,9 +79,44 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
     [[1, 1, 0], [0, 1, 1]], // Z
   ];
 
+  final Map<String, ui.Image> _decodedImages = {};
+
+  Future<void> _decodePatternImages() async {
+    for (final iconKey in widget.patternSlotIcons) {
+      if (iconKey.startsWith('/') || iconKey.contains('content://')) {
+        if (!_decodedImages.containsKey(iconKey)) {
+          try {
+            final File file = File(iconKey);
+            if (await file.exists()) {
+              final bytes = await file.readAsBytes();
+              final codec = await ui.instantiateImageCodec(bytes);
+              final frame = await codec.getNextFrame();
+              if (mounted) {
+                setState(() {
+                  _decodedImages[iconKey] = frame.image;
+                });
+              }
+            }
+          } catch (e) {
+            debugPrint("Error decoding preview image: $e");
+          }
+        }
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant LiveWallpaperPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.patternSlotIcons != oldWidget.patternSlotIcons) {
+      _decodePatternImages();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _decodePatternImages();
     _controller = AnimationController(vsync: this, duration: const Duration(seconds: 20));
     if (widget.isAnimActive) {
       _controller.repeat();
@@ -521,6 +568,20 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
             case 'fluids':
               painter = FluidSwarmPainter(_fluidParticles);
               break;
+            case 'pattern':
+              double cellSz = 120.0;
+              if (widget.patternDensity == 'small') cellSz = 80.0;
+              if (widget.patternDensity == 'large') cellSz = 180.0;
+              painter = PatternPainter(
+                animationTime: _controller.value,
+                layoutSize: widget.patternLayoutSize,
+                slotIcons: widget.patternSlotIcons,
+                cellSize: cellSz,
+                speed: widget.patternSpeed,
+                rotate: widget.patternRotate,
+                decodedImages: _decodedImages,
+              );
+              break;
             default:
               final playlist = widget.playlist;
               if (playlist == null || playlist.isEmpty) {
@@ -555,7 +616,8 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
                 );
               }
               
-              final index = ((_controller.value * playlist.length).toInt()) % playlist.length;
+              final elapsedSeconds = _controller.value * 20.0;
+              final index = (elapsedSeconds ~/ 3.0).toInt() % playlist.length;
               final currentPath = playlist[index];
               
               return AnimatedSwitcher(

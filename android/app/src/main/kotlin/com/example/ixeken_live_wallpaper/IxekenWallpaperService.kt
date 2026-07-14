@@ -71,6 +71,21 @@ class IxekenWallpaperService : WallpaperService() {
             loadEngine(surfaceHolder)
         }
 
+        private fun isLockScreenOnly(): Boolean {
+            if (android.os.Build.VERSION.SDK_INT >= 34) {
+                val flags = try { getWallpaperFlags() } catch (e: Exception) { 0 }
+                if (flags != 0) {
+                    val isLock = (flags and android.app.WallpaperManager.FLAG_LOCK) != 0
+                    val isSystem = (flags and android.app.WallpaperManager.FLAG_SYSTEM) != 0
+                    if (isLock && !isSystem) {
+                        return true
+                    }
+                }
+            }
+            val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+            return keyguardManager?.isKeyguardLocked == true
+        }
+
         private fun loadEngine(holder: SurfaceHolder) {
             // 1. Limpieza profunda del motor anterior
             activeEngine?.onVisibilityChanged(false)
@@ -78,7 +93,12 @@ class IxekenWallpaperService : WallpaperService() {
             activeEngine = null
             
             // 2. Leer nueva configuración
-            val type = prefs.getString("selected_engine", "carousel")
+            val isLock = isLockScreenOnly()
+            val engineKey = if (isLock) "selected_engine_lock" else "selected_engine"
+            var type = prefs.getString(engineKey, "same")
+            if (type.isNullOrEmpty() || type == "same") {
+                type = prefs.getString("selected_engine", "carousel")
+            }
             
             // 3. Instanciar nuevo motor
             activeEngine = when (type) {
@@ -92,6 +112,7 @@ class IxekenWallpaperService : WallpaperService() {
                 "vaporwave" -> VaporwaveWallpaperEngine(this@IxekenWallpaperService)
                 "conway" -> ConwayWallpaperEngine(this@IxekenWallpaperService)
                 "fluids" -> FluidSwarmWallpaperEngine(this@IxekenWallpaperService)
+                "pattern" -> PatternWallpaperEngine(this@IxekenWallpaperService)
                 else -> CarouselWallpaperEngine(this@IxekenWallpaperService)
             }
             

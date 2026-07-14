@@ -28,6 +28,17 @@ class AppearanceScreen extends StatefulWidget {
 class _AppearanceScreenState extends State<AppearanceScreen> {
   double _fontWeight = 400.0;
   double _letterSpacing = 0.0;
+  late String _currentThemeMode;
+  late String _currentFont;
+  late int _currentFontSizeIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentThemeMode = widget.appThemeMode;
+    _currentFont = widget.currentFont;
+    _currentFontSizeIndex = widget.fontSizeIndex;
+  }
 
   void _showVariationsSheet() {
     final l = L10n.of(context);
@@ -114,8 +125,8 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                           child: Slider(
                             value: _letterSpacing,
                             min: -2.0,
-                            max: 4.0,
-                            divisions: 12,
+                            max: 10.0,
+                            divisions: 24,
                             label: _letterSpacing.toStringAsFixed(1),
                             onChanged: (val) {
                               setModalState(() {
@@ -195,20 +206,35 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
           children: [
             _buildGridButton(
               label: 'Ixeken light',
-              isSelected: widget.appThemeMode == 'ixeken_light',
-              onTap: () => widget.onAppThemeModeChanged('ixeken_light'),
+              isSelected: _currentThemeMode == 'ixeken_light',
+              onTap: () {
+                setState(() {
+                  _currentThemeMode = 'ixeken_light';
+                });
+                widget.onAppThemeModeChanged('ixeken_light');
+              },
             ),
             const SizedBox(width: 8),
             _buildGridButton(
               label: 'Ixeken dark',
-              isSelected: widget.appThemeMode == 'ixeken_dark',
-              onTap: () => widget.onAppThemeModeChanged('ixeken_dark'),
+              isSelected: _currentThemeMode == 'ixeken_dark',
+              onTap: () {
+                setState(() {
+                  _currentThemeMode = 'ixeken_dark';
+                });
+                widget.onAppThemeModeChanged('ixeken_dark');
+              },
             ),
             const SizedBox(width: 8),
             _buildGridButton(
               label: 'Cherry',
-              isSelected: widget.appThemeMode == 'cherry',
-              onTap: () => widget.onAppThemeModeChanged('cherry'),
+              isSelected: _currentThemeMode == 'cherry',
+              onTap: () {
+                setState(() {
+                  _currentThemeMode = 'cherry';
+                });
+                widget.onAppThemeModeChanged('cherry');
+              },
             ),
           ],
         ),
@@ -217,20 +243,35 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
           children: [
             _buildGridButton(
               label: 'Amoled',
-              isSelected: widget.appThemeMode == 'amoled',
-              onTap: () => widget.onAppThemeModeChanged('amoled'),
+              isSelected: _currentThemeMode == 'amoled',
+              onTap: () {
+                setState(() {
+                  _currentThemeMode = 'amoled';
+                });
+                widget.onAppThemeModeChanged('amoled');
+              },
             ),
             const SizedBox(width: 8),
             _buildGridButton(
               label: 'Elegance',
-              isSelected: widget.appThemeMode == 'elegance',
-              onTap: () => widget.onAppThemeModeChanged('elegance'),
+              isSelected: _currentThemeMode == 'elegance',
+              onTap: () {
+                setState(() {
+                  _currentThemeMode = 'elegance';
+                });
+                widget.onAppThemeModeChanged('elegance');
+              },
             ),
             const SizedBox(width: 8),
             _buildGridButton(
               label: 'Earthy',
-              isSelected: widget.appThemeMode == 'earthy',
-              onTap: () => widget.onAppThemeModeChanged('earthy'),
+              isSelected: _currentThemeMode == 'earthy',
+              onTap: () {
+                setState(() {
+                  _currentThemeMode = 'earthy';
+                });
+                widget.onAppThemeModeChanged('earthy');
+              },
             ),
           ],
         ),
@@ -245,20 +286,35 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
           children: [
             _buildGridButton(
               label: 'System',
-              isSelected: widget.currentFont == 'system',
-              onTap: () => widget.onFontChanged('system'),
+              isSelected: _currentFont == 'system',
+              onTap: () {
+                setState(() {
+                  _currentFont = 'system';
+                });
+                widget.onFontChanged('system');
+              },
             ),
             const SizedBox(width: 8),
             _buildGridButton(
               label: 'Inter',
-              isSelected: widget.currentFont == 'inter',
-              onTap: () => widget.onFontChanged('inter'),
+              isSelected: _currentFont == 'inter',
+              onTap: () {
+                setState(() {
+                  _currentFont = 'inter';
+                });
+                widget.onFontChanged('inter');
+              },
             ),
             const SizedBox(width: 8),
             _buildGridButton(
               label: 'Rubik',
-              isSelected: widget.currentFont == 'rubik',
-              onTap: () => widget.onFontChanged('rubik'),
+              isSelected: _currentFont == 'rubik',
+              onTap: () {
+                setState(() {
+                  _currentFont = 'rubik';
+                });
+                widget.onFontChanged('rubik');
+              },
             ),
           ],
         ),
@@ -267,20 +323,35 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
           children: [
             _buildGridButton(
               label: 'Space Grotesk',
-              isSelected: widget.currentFont == 'space_grotesk',
-              onTap: () => widget.onFontChanged('space_grotesk'),
+              isSelected: _currentFont == 'space_grotesk',
+              onTap: () {
+                setState(() {
+                  _currentFont = 'space_grotesk';
+                });
+                widget.onFontChanged('space_grotesk');
+              },
             ),
             const SizedBox(width: 8),
             _buildGridButton(
               label: 'Ubuntu',
-              isSelected: widget.currentFont == 'ubuntu',
-              onTap: () => widget.onFontChanged('ubuntu'),
+              isSelected: _currentFont == 'ubuntu',
+              onTap: () {
+                setState(() {
+                  _currentFont = 'ubuntu';
+                });
+                widget.onFontChanged('ubuntu');
+              },
             ),
             const SizedBox(width: 8),
             _buildGridButton(
               label: 'GS Sans Flex',
-              isSelected: widget.currentFont == 'gs_sans_flex' || widget.currentFont == 'gs_flex',
-              onTap: () => widget.onFontChanged('gs_sans_flex'),
+              isSelected: _currentFont == 'gs_sans_flex' || _currentFont == 'gs_flex',
+              onTap: () {
+                setState(() {
+                  _currentFont = 'gs_sans_flex';
+                });
+                widget.onFontChanged('gs_sans_flex');
+              },
             ),
           ],
         ),
@@ -373,7 +444,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                       ),
                       const SizedBox(height: 16),
                       _buildFontGrid(),
-                      if (widget.currentFont == 'gs_sans_flex' || widget.currentFont == 'gs_flex') ...[
+                      if (_currentFont == 'gs_sans_flex' || _currentFont == 'gs_flex') ...[
                         const SizedBox(height: 16),
                         SizedBox(
                           width: double.infinity,
@@ -431,12 +502,15 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                           inactiveTickMarkColor: primaryColor.withValues(alpha: 0.4),
                         ),
                         child: Slider(
-                          value: widget.fontSizeIndex.toDouble(),
+                          value: _currentFontSizeIndex.toDouble(),
                           min: 0,
                           max: 8,
                           divisions: 8,
                           onChanged: (val) {
                             HapticFeedback.selectionClick();
+                            setState(() {
+                              _currentFontSizeIndex = val.round();
+                            });
                             widget.onFontSizeIndexChanged(val.round());
                           },
                         ),

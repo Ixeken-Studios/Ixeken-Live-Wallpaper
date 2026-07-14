@@ -7,3 +7,5 @@ export 'starfield_painter.dart';
 export 'vaporwave_painter.dart';
 export 'conway_painter.dart';
 export 'fluid_swarm_painter.dart';
+export 'pattern_painter.dart';
+

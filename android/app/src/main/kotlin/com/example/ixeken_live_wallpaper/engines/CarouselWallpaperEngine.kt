@@ -265,10 +265,9 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
             nextIndex = getNextIndex()
         } else {
             releaseMediaPlayer()
-            previousBitmap = currentBitmap
-            
             val usePreloaded = nextPreloadedBitmap != null && preloadedPath == nextPath
             if (usePreloaded) {
+                previousBitmap = currentBitmap
                 currentBitmap = nextPreloadedBitmap
                 nextPreloadedBitmap = null
                 preloadedPath = null
@@ -280,8 +279,11 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
                     val bitmap = loadAndScaleBitmap(currentMediaPath)
                     mainHandler.post { 
                         if (!isDestroyed) {
-                            currentBitmap = bitmap
-                            startFadeAnimation()
+                            if (bitmap != null) {
+                                previousBitmap = currentBitmap
+                                currentBitmap = bitmap
+                                startFadeAnimation()
+                            }
                         } else {
                             bitmap?.recycle()
                         }
@@ -347,9 +349,14 @@ class CarouselWallpaperEngine(private val context: Context) : IxekenWallpaperEng
             val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(path, options)
             val frame = currentHolder?.surfaceFrame ?: Rect(0,0,1080,1920)
-            
-            val targetW = if (isParallaxEnabled) (frame.width() * 1.1f).toInt() else frame.width()
-            val targetH = if (isParallaxEnabled) (frame.height() * 1.1f).toInt() else frame.height()
+            var w = frame.width()
+            var h = frame.height()
+            if (w <= 0 || h <= 0) {
+                w = 1080
+                h = 1920
+            }
+            val targetW = if (isParallaxEnabled) (w * 1.1f).toInt() else w
+            val targetH = if (isParallaxEnabled) (h * 1.1f).toInt() else h
             
             options.inSampleSize = calculateInSampleSize(options, targetW, targetH)
             options.inJustDecodeBounds = false
