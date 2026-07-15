@@ -282,6 +282,10 @@ class _HomePageState extends State<HomePage> {
       'conway': '${l.engineConway} 🦠',
       'fluids': '${l.engineFluids} 💨',
       'pattern': 'Patrón 🖼️',
+      'floral': 'Brisa Floral 🌸',
+      'bokeh': 'Lluvia de Luces ✨',
+      'quantum': 'Quantum ⚛️',
+      'aura': 'Aura Holográfica 🌈',
     };
   }
 
@@ -299,6 +303,10 @@ class _HomePageState extends State<HomePage> {
       'conway': l.descConway,
       'fluids': l.descFluids,
       'pattern': 'Mosaico de iconos personalizados desplazándose en cuadrícula diagonal',
+      'floral': 'Pétalos de flores cayendo y flotando suavemente, balanceados por el viento',
+      'bokeh': 'Grandes círculos de luces desenfocadas que flotan y se difuminan con elegancia',
+      'quantum': 'Nodos y líneas de conexiones de energía atraídas magnéticamente por tu dedo',
+      'aura': 'Burbujas holográficas líquidas de colores que siguen tus toques en pantalla',
     };
   }
 

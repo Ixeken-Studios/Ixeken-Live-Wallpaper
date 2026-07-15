@@ -64,6 +64,20 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
   // Vaporwave State
   double _vaporwaveTime = 0.0;
 
+  // Floral wind & state
+  final List<PetalState> _petals = [];
+  double _windX = 0.0;
+  double _windY = 0.0;
+
+  // Bokeh lights state
+  final List<BokehState> _bokehLights = [];
+
+  // Quantum energy nodes
+  final List<QuantumNodeState> _quantumNodes = [];
+
+  // Aura morphing blobs
+  final List<AuraBlobState> _auraBlobs = [];
+
   // Tetris Grid State
   List<List<int>> _tetrisGrid = [];
   late TetrisPiece _activePiece;
@@ -129,6 +143,10 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
     _initStars();
     _initConway();
     _initFluids();
+    _initFloral();
+    _initBokeh();
+    _initQuantum();
+    _initAura();
     
     if (widget.isAnimActive) {
       _controller.addListener(() {
@@ -137,6 +155,7 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
         _animateConway();
         _animateFluids();
         _animateVaporwave();
+        _animateFloral();
       });
     }
   }
@@ -266,6 +285,42 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
         color: colors[rand.nextInt(colors.length)],
       )..px = rand.nextDouble() * 200..py = rand.nextDouble() * 350);
     }
+  }
+
+  void _initFloral() {
+    _petals.clear();
+    for (int i = 0; i < 25; i++) {
+      _petals.add(PetalState.random(200.0, 350.0));
+    }
+  }
+
+  void _initBokeh() {
+    _bokehLights.clear();
+    for (int i = 0; i < 15; i++) {
+      _bokehLights.add(BokehState.random(200.0, 350.0));
+    }
+  }
+
+  void _initQuantum() {
+    _quantumNodes.clear();
+    for (int i = 0; i < 20; i++) {
+      _quantumNodes.add(QuantumNodeState.random(200.0, 350.0));
+    }
+  }
+
+  void _initAura() {
+    _auraBlobs.clear();
+    for (int i = 0; i < 5; i++) {
+      _auraBlobs.add(AuraBlobState.random(200.0, 350.0));
+    }
+  }
+
+  void _animateFloral() {
+    if (!mounted || widget.engineId != 'floral') return;
+    setState(() {
+      _windX *= 0.95;
+      _windY *= 0.95;
+    });
   }
 
   void _animateTetris() {
@@ -431,18 +486,54 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
       setState(() {
         _isWarping = true;
       });
-    } else if (widget.engineId == 'fluids') {
+    } else if (widget.engineId == 'fluids' || widget.engineId == 'quantum' || widget.engineId == 'aura') {
       setState(() {
         _touchPos = pos;
+      });
+    } else if (widget.engineId == 'floral') {
+      setState(() {
+        _windX = (math.Random().nextDouble() - 0.5) * 8.0;
+        _windY = math.Random().nextDouble() * 5.0 + 3.0;
+      });
+    } else if (widget.engineId == 'bokeh') {
+      setState(() {
+        for (var b in _bokehLights) {
+          final dx = b.x - pos.dx;
+          final dy = b.y - pos.dy;
+          final dist = math.sqrt(dx * dx + dy * dy);
+          if (dist < 80.0 && dist > 1.0) {
+            final force = (80.0 - dist) / 80.0 * 2.0;
+            b.vx += (dx / dist) * force;
+            b.vy += (dy / dist) * force;
+          }
+        }
       });
     }
   }
 
   void _handlePanUpdate(DragUpdateDetails details) {
     final pos = details.localPosition;
-    if (widget.engineId == 'fluids') {
+    if (widget.engineId == 'fluids' || widget.engineId == 'quantum' || widget.engineId == 'aura') {
       setState(() {
         _touchPos = pos;
+      });
+    } else if (widget.engineId == 'floral') {
+      setState(() {
+        _windX = (details.delta.dx * 0.45).clamp(-10.0, 10.0);
+        _windY = (details.delta.dy * 0.45).clamp(-10.0, 10.0);
+      });
+    } else if (widget.engineId == 'bokeh') {
+      setState(() {
+        for (var b in _bokehLights) {
+          final dx = b.x - pos.dx;
+          final dy = b.y - pos.dy;
+          final dist = math.sqrt(dx * dx + dy * dy);
+          if (dist < 100.0 && dist > 1.0) {
+            final force = (100.0 - dist) / 100.0 * 1.5;
+            b.vx += (dx / dist) * force;
+            b.vy += (dy / dist) * force;
+          }
+        }
       });
     } else if (widget.engineId == 'conway') {
       final cellW = 200.0 / 30;
@@ -580,6 +671,31 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
                 speed: widget.patternSpeed,
                 rotate: widget.patternRotate,
                 decodedImages: _decodedImages,
+              );
+              break;
+            case 'floral':
+              painter = FloralPainter(
+                petals: _petals,
+                windX: _windX,
+                windY: _windY,
+              );
+              break;
+            case 'bokeh':
+              painter = BokehPainter(
+                lights: _bokehLights,
+                animationVal: _controller.value,
+              );
+              break;
+            case 'quantum':
+              painter = QuantumPainter(
+                nodes: _quantumNodes,
+                gravityPoint: _touchPos,
+              );
+              break;
+            case 'aura':
+              painter = AuraPainter(
+                blobs: _auraBlobs,
+                touchPoint: _touchPos,
               );
               break;
             default:

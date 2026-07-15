@@ -113,6 +113,10 @@ class IxekenWallpaperService : WallpaperService() {
                 "conway" -> ConwayWallpaperEngine(this@IxekenWallpaperService)
                 "fluids" -> FluidSwarmWallpaperEngine(this@IxekenWallpaperService)
                 "pattern" -> PatternWallpaperEngine(this@IxekenWallpaperService)
+                "floral" -> FloralWallpaperEngine(this@IxekenWallpaperService)
+                "bokeh" -> BokehWallpaperEngine(this@IxekenWallpaperService)
+                "quantum" -> QuantumWallpaperEngine(this@IxekenWallpaperService)
+                "aura" -> AuraWallpaperEngine(this@IxekenWallpaperService)
                 else -> CarouselWallpaperEngine(this@IxekenWallpaperService)
             }
             

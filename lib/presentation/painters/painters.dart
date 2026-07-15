@@ -8,4 +8,8 @@ export 'vaporwave_painter.dart';
 export 'conway_painter.dart';
 export 'fluid_swarm_painter.dart';
 export 'pattern_painter.dart';
+export 'floral_painter.dart';
+export 'bokeh_painter.dart';
+export 'quantum_painter.dart';
+export 'aura_painter.dart';
 
