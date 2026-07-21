@@ -732,45 +732,52 @@ class _LiveWallpaperPreviewState extends State<LiveWallpaperPreview> with Single
                 );
               }
               
-              final elapsedSeconds = _controller.value * 20.0;
-              final index = (elapsedSeconds ~/ 3.0).toInt() % playlist.length;
+              final secondsElapsed = DateTime.now().millisecondsSinceEpoch ~/ 5000;
+              final index = secondsElapsed % playlist.length;
               final currentPath = playlist[index];
               
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 800),
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-                layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
-                  return Stack(
-                    fit: StackFit.expand,
-                    alignment: Alignment.center,
-                    children: <Widget>[
-                      ...previousChildren,
-                      if (currentChild != null) currentChild,
-                    ],
-                  );
-                },
-                child: Image.file(
-                  File(currentPath),
-                  key: ValueKey<String>(currentPath),
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    final isVideo = currentPath.toLowerCase().endsWith('.mp4') ||
-                                    currentPath.toLowerCase().endsWith('.mov') ||
-                                    currentPath.toLowerCase().endsWith('.mkv');
-                    return Container(
-                      key: ValueKey<String>('error_$currentPath'),
-                      color: Theme.of(context).colorScheme.surface,
-                      alignment: Alignment.center,
-                      child: Icon(
-                        isVideo ? Icons.video_collection_outlined : Icons.broken_image_outlined,
-                        size: 48,
-                        color: Colors.white54,
-                      ),
-                    );
-                  },
-                ),
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 800),
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                    layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                      return Stack(
+                        fit: StackFit.expand,
+                        alignment: Alignment.center,
+                        children: <Widget>[
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      );
+                    },
+                    child: Image.file(
+                      File(currentPath),
+                      key: ValueKey<String>(currentPath),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        final isVideo = currentPath.toLowerCase().endsWith('.mp4') ||
+                                        currentPath.toLowerCase().endsWith('.mov') ||
+                                        currentPath.toLowerCase().endsWith('.mkv');
+                        return Container(
+                          key: ValueKey<String>('error_$currentPath'),
+                          color: Theme.of(context).colorScheme.surface,
+                          alignment: Alignment.center,
+                          child: Icon(
+                            isVideo ? Icons.video_collection_outlined : Icons.broken_image_outlined,
+                            size: 48,
+                            color: Colors.white54,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  if (widget.isDimEnabled)
+                    Container(color: Colors.black.withValues(alpha: widget.dimIntensity)),
+                ],
               );
           }
           

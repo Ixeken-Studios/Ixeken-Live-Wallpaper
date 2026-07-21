@@ -26,8 +26,6 @@ class AppearanceScreen extends StatefulWidget {
 }
 
 class _AppearanceScreenState extends State<AppearanceScreen> {
-  double _fontWeight = 400.0;
-  double _letterSpacing = 0.0;
   late String _currentThemeMode;
   late String _currentFont;
   late int _currentFontSizeIndex;
@@ -38,127 +36,6 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
     _currentThemeMode = widget.appThemeMode;
     _currentFont = widget.currentFont;
     _currentFontSizeIndex = widget.fontSizeIndex;
-  }
-
-  void _showVariationsSheet() {
-    final l = L10n.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      enableDrag: true,
-      constraints: const BoxConstraints(maxWidth: 600),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: isDark 
-                                ? Colors.white.withValues(alpha: 0.08) 
-                                : Colors.black.withValues(alpha: 0.05),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.settings_suggest_outlined, color: primaryColor),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l.customizeGsFlex,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                              ),
-                              const SizedBox(height: 2),
-                              const Text(
-                                'GS Flex Variable Font Axes',
-                                style: TextStyle(fontSize: 12, color: Colors.white60),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    const Text('Font Weight', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Slider(
-                            value: _fontWeight,
-                            min: 100.0,
-                            max: 900.0,
-                            divisions: 8,
-                            label: _fontWeight.round().toString(),
-                            onChanged: (val) {
-                              setModalState(() {
-                                _fontWeight = val;
-                              });
-                              setState(() {});
-                            },
-                          ),
-                        ),
-                        Text(_fontWeight.round().toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('Letter Spacing', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Slider(
-                            value: _letterSpacing,
-                            min: -2.0,
-                            max: 10.0,
-                            divisions: 24,
-                            label: _letterSpacing.toStringAsFixed(1),
-                            onChanged: (val) {
-                              setModalState(() {
-                                _letterSpacing = val;
-                              });
-                              setState(() {});
-                            },
-                          ),
-                        ),
-                        Text(_letterSpacing.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: Text(
-                        'Typography Preview',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.values[((_fontWeight - 100) / 100).round().clamp(0, 8)],
-                          letterSpacing: _letterSpacing,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   Widget _buildGridButton({
@@ -344,7 +221,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
             ),
             const SizedBox(width: 8),
             _buildGridButton(
-              label: 'GS Sans Flex',
+              label: 'GS Flex',
               isSelected: _currentFont == 'gs_sans_flex' || _currentFont == 'gs_flex',
               onTap: () {
                 setState(() {
@@ -444,21 +321,6 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                       ),
                       const SizedBox(height: 16),
                       _buildFontGrid(),
-                      if (_currentFont == 'gs_sans_flex' || _currentFont == 'gs_flex') ...[
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _showVariationsSheet,
-                            icon: const Icon(Icons.settings_suggest_outlined),
-                            label: Text(l.customizeGsFlex),
-                            style: OutlinedButton.styleFrom(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -485,9 +347,9 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                             child: Icon(Icons.format_size_outlined, color: primaryColor),
                           ),
                           const SizedBox(width: 16),
-                          const Text(
-                            'Font Size',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          Text(
+                            l.fontSize,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                         ],
                       ),
@@ -535,7 +397,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                       const SizedBox(height: 4),
                       Center(
                         child: Text(
-                          'Default',
+                          l.defaultLabel,
                           style: TextStyle(
                             fontSize: 11,
                             color: primaryColor.withValues(alpha: 0.6),

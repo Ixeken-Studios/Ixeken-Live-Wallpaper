@@ -14,12 +14,33 @@ import 'presentation/widgets/settings_tab.dart';
 import 'presentation/widgets/permissions_sheet.dart';
 import 'presentation/widgets/appearance_screen.dart';
 import 'presentation/widgets/wallpaper_detail_screen.dart';
+import 'services/github_update_service.dart';
 import 'dart:io';
 
 // Paletas de Diseño
 final ValueNotifier<String> themeStyleNotifier = ValueNotifier('ixeken_dark');
 final ValueNotifier<String> fontFamilyNotifier = ValueNotifier('system');
 final ValueNotifier<int> fontSizeIndexNotifier = ValueNotifier(4);
+
+TextTheme _ensureFontSizes(TextTheme theme) {
+  return theme.copyWith(
+    displayLarge: (theme.displayLarge ?? const TextStyle()).copyWith(fontSize: theme.displayLarge?.fontSize ?? 57.0),
+    displayMedium: (theme.displayMedium ?? const TextStyle()).copyWith(fontSize: theme.displayMedium?.fontSize ?? 45.0),
+    displaySmall: (theme.displaySmall ?? const TextStyle()).copyWith(fontSize: theme.displaySmall?.fontSize ?? 36.0),
+    headlineLarge: (theme.headlineLarge ?? const TextStyle()).copyWith(fontSize: theme.headlineLarge?.fontSize ?? 32.0),
+    headlineMedium: (theme.headlineMedium ?? const TextStyle()).copyWith(fontSize: theme.headlineMedium?.fontSize ?? 28.0),
+    headlineSmall: (theme.headlineSmall ?? const TextStyle()).copyWith(fontSize: theme.headlineSmall?.fontSize ?? 24.0),
+    titleLarge: (theme.titleLarge ?? const TextStyle()).copyWith(fontSize: theme.titleLarge?.fontSize ?? 22.0),
+    titleMedium: (theme.titleMedium ?? const TextStyle()).copyWith(fontSize: theme.titleMedium?.fontSize ?? 16.0),
+    titleSmall: (theme.titleSmall ?? const TextStyle()).copyWith(fontSize: theme.titleSmall?.fontSize ?? 14.0),
+    bodyLarge: (theme.bodyLarge ?? const TextStyle()).copyWith(fontSize: theme.bodyLarge?.fontSize ?? 16.0),
+    bodyMedium: (theme.bodyMedium ?? const TextStyle()).copyWith(fontSize: theme.bodyMedium?.fontSize ?? 14.0),
+    bodySmall: (theme.bodySmall ?? const TextStyle()).copyWith(fontSize: theme.bodySmall?.fontSize ?? 12.0),
+    labelLarge: (theme.labelLarge ?? const TextStyle()).copyWith(fontSize: theme.labelLarge?.fontSize ?? 14.0),
+    labelMedium: (theme.labelMedium ?? const TextStyle()).copyWith(fontSize: theme.labelMedium?.fontSize ?? 12.0),
+    labelSmall: (theme.labelSmall ?? const TextStyle()).copyWith(fontSize: theme.labelSmall?.fontSize ?? 11.0),
+  );
+}
 
 ThemeData buildThemeData(String themeStyle, String fontFamily, int fontSizeIndex) {
   Color primary;
@@ -63,36 +84,38 @@ ThemeData buildThemeData(String themeStyle, String fontFamily, int fontSizeIndex
   final isLightTheme = themeStyle == 'ixeken_light' || themeStyle == 'cherry' || themeStyle == 'earthy';
   final brightness = isLightTheme ? Brightness.light : Brightness.dark;
 
+  final baseTheme = ThemeData(brightness: brightness).textTheme;
   TextTheme textTheme;
   switch (fontFamily) {
     case 'inter':
-      textTheme = GoogleFonts.interTextTheme();
+      textTheme = GoogleFonts.interTextTheme(baseTheme);
       break;
     case 'rubik':
-      textTheme = GoogleFonts.rubikTextTheme();
+      textTheme = GoogleFonts.rubikTextTheme(baseTheme);
       break;
     case 'space_grotesk':
-      textTheme = GoogleFonts.spaceGroteskTextTheme();
+      textTheme = GoogleFonts.spaceGroteskTextTheme(baseTheme);
       break;
     case 'ubuntu':
-      textTheme = GoogleFonts.ubuntuTextTheme();
+      textTheme = GoogleFonts.ubuntuTextTheme(baseTheme);
       break;
     case 'gs_sans_flex':
     case 'gs_flex':
-      textTheme = GoogleFonts.outfitTextTheme();
+      textTheme = GoogleFonts.outfitTextTheme(baseTheme);
       break;
     case 'system':
     default:
-      textTheme = GoogleFonts.nunitoTextTheme().copyWith(
-        displayLarge: GoogleFonts.outfit(),
-        displayMedium: GoogleFonts.outfit(),
-        displaySmall: GoogleFonts.outfit(),
-        headlineLarge: GoogleFonts.outfit(),
-        headlineMedium: GoogleFonts.outfit(),
-        headlineSmall: GoogleFonts.outfit(),
-        titleLarge: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-        titleMedium: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-        titleSmall: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+      final nunitoTheme = GoogleFonts.nunitoTextTheme(baseTheme);
+      textTheme = nunitoTheme.copyWith(
+        displayLarge: GoogleFonts.outfit(textStyle: nunitoTheme.displayLarge),
+        displayMedium: GoogleFonts.outfit(textStyle: nunitoTheme.displayMedium),
+        displaySmall: GoogleFonts.outfit(textStyle: nunitoTheme.displaySmall),
+        headlineLarge: GoogleFonts.outfit(textStyle: nunitoTheme.headlineLarge),
+        headlineMedium: GoogleFonts.outfit(textStyle: nunitoTheme.headlineMedium),
+        headlineSmall: GoogleFonts.outfit(textStyle: nunitoTheme.headlineSmall),
+        titleLarge: GoogleFonts.outfit(textStyle: nunitoTheme.titleLarge, fontWeight: FontWeight.bold),
+        titleMedium: GoogleFonts.outfit(textStyle: nunitoTheme.titleMedium, fontWeight: FontWeight.bold),
+        titleSmall: GoogleFonts.outfit(textStyle: nunitoTheme.titleSmall, fontWeight: FontWeight.bold),
       );
       break;
   }
@@ -122,7 +145,7 @@ ThemeData buildThemeData(String themeStyle, String fontFamily, int fontSizeIndex
   }
 
   final double fontSizeFactor = 0.8 + (fontSizeIndex * 0.05);
-  textTheme = textTheme.apply(
+  textTheme = _ensureFontSizes(textTheme).apply(
     fontSizeFactor: fontSizeFactor,
     bodyColor: isLightTheme ? Colors.black87 : Colors.white,
     displayColor: isLightTheme ? Colors.black87 : Colors.white,
@@ -260,6 +283,8 @@ class _HomePageState extends State<HomePage> {
   int _carouselChangeInterval = 60;
   String _appThemeMode = 'system';
   bool _isHalfFpsEnabled = false;
+  bool _isSearchActive = false;
+  final TextEditingController _searchController = TextEditingController();
 
   // Pattern Settings
   int _patternLayoutSize = 2;
@@ -281,11 +306,11 @@ class _HomePageState extends State<HomePage> {
       'vaporwave': '${l.engineVaporwave} 🌅',
       'conway': '${l.engineConway} 🦠',
       'fluids': '${l.engineFluids} 💨',
-      'pattern': 'Patrón 🖼️',
-      'floral': 'Brisa Floral 🌸',
-      'bokeh': 'Lluvia de Luces ✨',
-      'quantum': 'Quantum ⚛️',
-      'aura': 'Aura Holográfica 🌈',
+      'pattern': '${l.enginePattern} 🖼️',
+      'floral': '${l.engineFloral} 🌸',
+      'bokeh': '${l.engineBokeh} ✨',
+      'quantum': '${l.engineQuantum} ⚛️',
+      'aura': '${l.engineAura} 🌈',
     };
   }
 
@@ -302,11 +327,11 @@ class _HomePageState extends State<HomePage> {
       'vaporwave': l.descVaporwave,
       'conway': l.descConway,
       'fluids': l.descFluids,
-      'pattern': 'Mosaico de iconos personalizados desplazándose en cuadrícula diagonal',
-      'floral': 'Pétalos de flores cayendo y flotando suavemente, balanceados por el viento',
-      'bokeh': 'Grandes círculos de luces desenfocadas que flotan y se difuminan con elegancia',
-      'quantum': 'Nodos y líneas de conexiones de energía atraídas magnéticamente por tu dedo',
-      'aura': 'Burbujas holográficas líquidas de colores que siguen tus toques en pantalla',
+      'pattern': l.descPattern,
+      'floral': l.descFloral,
+      'bokeh': l.descBokeh,
+      'quantum': l.descQuantum,
+      'aura': l.descAura,
     };
   }
 
@@ -363,6 +388,28 @@ class _HomePageState extends State<HomePage> {
       _patternDensity = prefs.getString('pattern_density') ?? 'medium';
       _patternRotate = prefs.getBool('pattern_rotate') ?? true;
     });
+
+    final checkUpdateOnStart = prefs.getBool('check_update_on_start') ?? false;
+    if (checkUpdateOnStart) {
+      _checkUpdateOnStartup();
+    }
+  }
+
+  Future<void> _checkUpdateOnStartup() async {
+    final result = await GitHubUpdateService.checkForUpdates();
+    if (!mounted) return;
+    if (result is NewVersionResult) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('New update available: ${result.version}'),
+          action: SnackBarAction(
+            label: 'Download',
+            onPressed: () => WallpaperManager.launchUrl(result.downloadUrl),
+          ),
+          duration: const Duration(seconds: 10),
+        ),
+      );
+    }
   }
 
   Future<void> _savePersistedData() async {
@@ -479,17 +526,68 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final l = L10n.of(context);
+    final showSearchField = _currentTab == 0 && _isSearchActive;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _currentTab == 0
-              ? l.titleLibrary
-              : _currentTab == 1
-                  ? l.titleAdjust
-                  : l.titleOptions,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
         centerTitle: true,
+        leading: showSearchField
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  setState(() {
+                    _isSearchActive = false;
+                    _searchQuery = '';
+                    _searchController.clear();
+                  });
+                },
+              )
+            : null,
+        title: showSearchField
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
+                  hintText: l.searchHint,
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                  border: InputBorder.none,
+                ),
+                onChanged: (val) {
+                  setState(() => _searchQuery = val);
+                },
+              )
+            : Text(
+                _currentTab == 0
+                    ? l.titleLibrary
+                    : _currentTab == 1
+                        ? l.titleAdjust
+                        : l.titleOptions,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+        actions: [
+          if (_currentTab == 0 && !_isSearchActive)
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () {
+                setState(() {
+                  _isSearchActive = true;
+                });
+              },
+            ),
+          if (showSearchField && _searchQuery.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () {
+                setState(() {
+                  _searchQuery = '';
+                  _searchController.clear();
+                });
+              },
+            ),
+        ],
       ),
       // Stack-based floating nav bar: correct pattern for floating bottom bars.
       // Using bottomNavigationBar with SafeArea>Align>Container causes the body
@@ -559,10 +657,13 @@ class _HomePageState extends State<HomePage> {
                           });
                           _savePersistedData();
                         },
-                        onDayNightModeChanged: (val) {
-                          setState(() => _useDayNightMode = val);
-                          _savePersistedData();
-                        },
+                onDayNightModeChanged: (val) {
+                  setState(() {
+                    _useDayNightMode = val;
+                    if (val) _syncWithSystemTheme = false;
+                  });
+                  _savePersistedData();
+                },
                         onDayStartHourChanged: (val) {
                           setState(() => _dayStartHour = val);
                           _savePersistedData();
@@ -588,9 +689,13 @@ class _HomePageState extends State<HomePage> {
                         onApplyEngine: (id) async {
                           setState(() {
                             _selectedEngine = id;
+                            _currentTab = 1;
                           });
                           await _savePersistedData();
                           await _applySettings();
+                          if (mounted && Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
                         },
                         onTetrisStyleChanged: (val) {
                           setState(() => _tetrisStyle = val);
@@ -681,7 +786,10 @@ class _HomePageState extends State<HomePage> {
                   _savePersistedData();
                 },
                 onDayNightModeChanged: (val) {
-                  setState(() => _useDayNightMode = val);
+                  setState(() {
+                    _useDayNightMode = val;
+                    if (val) _syncWithSystemTheme = false;
+                  });
                   _savePersistedData();
                 },
                 onDayStartHourChanged: (val) {
@@ -860,7 +968,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildFloatingNavigationBar() {
     final l = L10n.of(context);
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final secondaryColor = Theme.of(context).cardColor; // Secondary
+    final secondaryColor = Theme.of(context).cardColor;
 
     return SafeArea(
       top: false,
@@ -868,18 +976,18 @@ class _HomePageState extends State<HomePage> {
         alignment: Alignment.bottomCenter,
         child: Container(
           constraints: const BoxConstraints(maxWidth: 500),
-          margin: const EdgeInsets.only(bottom: 24, left: 24, right: 24, top: 8),
-          height: 72,
+          margin: const EdgeInsets.only(bottom: 24, left: 20, right: 20, top: 8),
+          height: 64,
           decoration: BoxDecoration(
             color: secondaryColor,
-            borderRadius: BorderRadius.circular(36),
+            borderRadius: BorderRadius.circular(32),
             border: Border.all(
               color: primaryColor.withValues(alpha: 0.08),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.black.withValues(alpha: 0.12),
                 blurRadius: 16,
                 spreadRadius: 2,
                 offset: const Offset(0, 8),
@@ -887,6 +995,7 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           child: Stack(
+            alignment: Alignment.center,
             children: [
               AnimatedAlign(
                 duration: const Duration(milliseconds: 300),
@@ -894,25 +1003,27 @@ class _HomePageState extends State<HomePage> {
                 alignment: Alignment((_currentTab - 1) * 1.0, 0.0),
                 child: FractionallySizedBox(
                   widthFactor: 1 / 3,
-                  child: Center(
+                  heightFactor: 1.0,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                     child: Container(
-                      width: 90,
-                      height: 48,
                       decoration: BoxDecoration(
                         color: primaryColor,
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(26),
                       ),
                     ),
                   ),
                 ),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(child: _buildNavItem(0, Icons.bar_chart_outlined, l.tabLibrary)),
-                  Expanded(child: _buildNavItem(1, Icons.home_outlined, l.tabAdjust)),
-                  Expanded(child: _buildNavItem(2, Icons.tune_outlined, l.tabOptions)),
-                ],
+              Positioned.fill(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(child: _buildNavItem(0, Icons.collections_bookmark_outlined, l.tabLibrary)),
+                    Expanded(child: _buildNavItem(1, Icons.home_outlined, l.tabAdjust)),
+                    Expanded(child: _buildNavItem(2, Icons.tune_outlined, l.tabOptions)),
+                  ],
+                ),
               ),
             ],
           ),
@@ -932,24 +1043,31 @@ class _HomePageState extends State<HomePage> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() => _currentTab = index),
-      child: AnimatedScale(
-        scale: isSelected ? 1.08 : 1.0,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutBack,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      child: Center(
+        child: AnimatedScale(
+          scale: isSelected ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutBack,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

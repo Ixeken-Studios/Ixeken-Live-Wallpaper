@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'app_info_screen.dart';
+import 'ixeken_logo.dart';
 import '../../l10n.dart';
 import '../../wallpaper_manager.dart';
 
@@ -56,7 +58,10 @@ class SettingsTab extends StatelessWidget {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
-                  title: Text(l.appearance),
+                  title: Text(
+                    l.appearance,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   subtitle: Text(l.appearanceSub),
                   trailing: Icon(
                     Icons.chevron_right,
@@ -96,14 +101,21 @@ class SettingsTab extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Lock Screen Wallpaper',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                Text(
+                                  l.lockScreenWallpaper,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
                                 ),
                                 const SizedBox(height: 2),
-                                const Text(
-                                  'Select a different engine for the lock screen',
-                                  style: TextStyle(fontSize: 12, color: Colors.white60),
+                                Text(
+                                  l.lockScreenSub,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
                                 ),
                               ],
                             ),
@@ -137,9 +149,9 @@ class SettingsTab extends StatelessWidget {
                               }
                             },
                             items: [
-                              const DropdownMenuItem(
+                              DropdownMenuItem(
                                 value: 'same',
-                                child: Text('Same as Home Screen'),
+                                child: Text(l.sameAsHome),
                               ),
                               ...engines.entries.map((e) => DropdownMenuItem(
                                 value: e.key,
@@ -184,7 +196,10 @@ class SettingsTab extends StatelessWidget {
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                title: Text(l.managePermissions),
+                title: Text(
+                  l.managePermissions,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 subtitle: Text(l.configPermissionsSub),
                 trailing: Icon(
                   Icons.chevron_right,
@@ -207,50 +222,44 @@ class SettingsTab extends StatelessWidget {
             const SizedBox(height: 8),
             Card(
               color: Theme.of(context).cardColor,
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: Icon(Icons.code, color: Theme.of(context).colorScheme.primary),
-                    title: Text(l.sourceCode),
-                    subtitle: Text(l.sourceCodeSub),
-                    onTap: () => WallpaperManager.launchUrl('https://github.com/Ixeken-Studios/Ixeken-Live-Wallpaper'),
+              child: ListTile(
+                leading: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(18),
                   ),
-                  Divider(
-                    height: 1,
-                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : Colors.black12,
+                  child: Padding(
+                    padding: const EdgeInsets.all(11.0),
+                    child: IxekenLogo(
+                      size: 22,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
-                  ListTile(
-                    leading: Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
-                    title: Text(l.developedBy),
-                    subtitle: const Text('Ixeken Studios'),
-                  ),
-                  Divider(
-                    height: 1,
-                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white12 : Colors.black12,
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.privacy_tip_outlined, color: Theme.of(context).colorScheme.primary),
-                    title: Text(l.privacyPolicy),
-                    subtitle: Text(l.readPrivacy),
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: Text(l.privacyPolicy),
-                          content: SingleChildScrollView(
-                            child: Text(l.privacyContent),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: Text(l.understood),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                ),
+                title: const Text(
+                  'Ixeken Live Wallpaper',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                subtitle: const Text(
+                  'v1.2.0',
+                  style: TextStyle(fontSize: 12),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white54
+                      : Colors.black45,
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AppInfoScreen(),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 120),
