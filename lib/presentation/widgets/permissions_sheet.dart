@@ -38,6 +38,7 @@ class PermissionsSheet extends StatelessWidget {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final cardColor = Theme.of(context).cardColor;
         final primaryColor = Theme.of(context).colorScheme.primary;
+        final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
 
         return SafeArea(
           top: false,
@@ -68,7 +69,7 @@ class PermissionsSheet extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black87,
+                      color: onSurfaceColor,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -79,7 +80,7 @@ class PermissionsSheet extends StatelessWidget {
                       l.permManageDesc,
                       style: TextStyle(
                         fontSize: 14,
-                        color: isDark ? Colors.white60 : Colors.black54,
+                        color: onSurfaceColor.withValues(alpha: 0.6),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -99,7 +100,7 @@ class PermissionsSheet extends StatelessWidget {
                               width: 44,
                               height: 44,
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+                                color: onSurfaceColor.withValues(alpha: isDark ? 0.08 : 0.05),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(Icons.storage, color: primaryColor),
@@ -114,7 +115,7 @@ class PermissionsSheet extends StatelessWidget {
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
-                                      color: isDark ? Colors.white : Colors.black87,
+                                      color: onSurfaceColor,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -122,7 +123,7 @@ class PermissionsSheet extends StatelessWidget {
                                     l.permGallerySub,
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: isDark ? Colors.white60 : Colors.black54,
+                                      color: onSurfaceColor.withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ],
@@ -134,7 +135,7 @@ class PermissionsSheet extends StatelessWidget {
                                 : ElevatedButton(
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: primaryColor,
-                                      foregroundColor: isDark ? Colors.black : Colors.white,
+                                      foregroundColor: cardColor,
                                       shape: const StadiumBorder(),
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                       elevation: 0,
@@ -151,6 +152,57 @@ class PermissionsSheet extends StatelessWidget {
                                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                                     ),
                                   ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Card(
+                      color: cardColor,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: onSurfaceColor.withValues(alpha: isDark ? 0.08 : 0.05),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.wifi_outlined, color: primaryColor),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l.permInternet,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: onSurfaceColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    l.permInternetSub,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: onSurfaceColor.withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(Icons.check_circle, color: primaryColor, size: 28),
                           ],
                         ),
                       ),

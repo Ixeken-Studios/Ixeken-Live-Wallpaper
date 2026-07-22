@@ -72,6 +72,9 @@ class L10n {
       'perm_battery': 'Optimización de Batería',
       'perm_battery_sub':
           'Evita que el ahorrador del sistema apague las animaciones de fondo.',
+      'perm_internet': 'Acceso a Internet',
+      'perm_internet_sub':
+          'Opcional. Se utiliza únicamente para verificar la versión y descargar actualizaciones de la aplicación.',
       'ignore': 'Ignorar',
       'revoke_settings': 'Revocar Permisos en Ajustes',
       'carousel_day_light': 'Fondos del Carrusel para el Día (Modo Claro)',
@@ -285,6 +288,9 @@ class L10n {
       'perm_battery': 'Battery Optimization',
       'perm_battery_sub':
           'Keeps system battery savers from freezing your wallpaper.',
+      'perm_internet': 'Internet Access',
+      'perm_internet_sub':
+          'Optional. Used solely to check for and download app updates.',
       'ignore': 'Ignore',
       'revoke_settings': 'Revoke Permissions in Settings',
       'carousel_day_light': 'Carousel Wallpapers for Day (Light Mode)',
@@ -495,6 +501,8 @@ class L10n {
   String get permStabilitySub => get('perm_stability_sub');
   String get permBattery => get('perm_battery');
   String get permBatterySub => get('perm_battery_sub');
+  String get permInternet => get('perm_internet');
+  String get permInternetSub => get('perm_internet_sub');
   String get ignore => get('ignore');
   String get revokeSettings => get('revoke_settings');
 

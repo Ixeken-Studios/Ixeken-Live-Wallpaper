@@ -171,6 +171,25 @@ ThemeData buildThemeData(String themeStyle, String fontFamily, int fontSizeIndex
     dividerColor: isLightTheme ? Colors.black12 : Colors.white12,
     fontFamily: resolvedFontFamily,
     textTheme: textTheme,
+    appBarTheme: AppBarTheme(
+      backgroundColor: background,
+      surfaceTintColor: background,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: background,
+      surfaceTintColor: background,
+      elevation: 8,
+      modalElevation: 12,
+      shape: RoundedRectangleBorder(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        side: BorderSide(
+          color: colorScheme.onSurface.withValues(alpha: 0.12),
+          width: 1,
+        ),
+      ),
+    ),
     cardTheme: CardThemeData(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(32),

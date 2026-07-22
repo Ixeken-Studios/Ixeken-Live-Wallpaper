@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../l10n.dart';
 
 class AppearanceScreen extends StatefulWidget {
@@ -242,13 +241,60 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
     final cardColor = Theme.of(context).cardColor;
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l.appearance),
-        centerTitle: true,
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
         elevation: 0,
+        title: Row(
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: primaryColor.withValues(alpha: 0.15),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.chevron_left, color: primaryColor, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      l.back,
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                l.appearance,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: onSurfaceColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
       body: Align(
         alignment: Alignment.topCenter,
@@ -271,9 +317,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: isDark 
-                                  ? Colors.white.withValues(alpha: 0.08) 
-                                  : Colors.black.withValues(alpha: 0.05),
+                              color: onSurfaceColor.withValues(alpha: isDark ? 0.08 : 0.05),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(Icons.brush_outlined, color: primaryColor),
@@ -305,9 +349,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: isDark 
-                                  ? Colors.white.withValues(alpha: 0.08) 
-                                  : Colors.black.withValues(alpha: 0.05),
+                              color: onSurfaceColor.withValues(alpha: isDark ? 0.08 : 0.05),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(Icons.text_fields_outlined, color: primaryColor),
@@ -339,9 +381,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: isDark 
-                                  ? Colors.white.withValues(alpha: 0.08) 
-                                  : Colors.black.withValues(alpha: 0.05),
+                              color: onSurfaceColor.withValues(alpha: isDark ? 0.08 : 0.05),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(Icons.format_size_outlined, color: primaryColor),
@@ -354,56 +394,60 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          activeTrackColor: primaryColor,
-                          inactiveTrackColor: primaryColor.withValues(alpha: 0.2),
-                          thumbColor: primaryColor,
-                          tickMarkShape: const RoundSliderTickMarkShape(tickMarkRadius: 4),
-                          activeTickMarkColor: primaryColor,
-                          inactiveTickMarkColor: primaryColor.withValues(alpha: 0.4),
-                        ),
-                        child: Slider(
-                          value: _currentFontSizeIndex.toDouble(),
-                          min: 0,
-                          max: 8,
-                          divisions: 8,
-                          onChanged: (val) {
-                            HapticFeedback.selectionClick();
-                            setState(() {
-                              _currentFontSizeIndex = val.round();
-                            });
-                            widget.onFontSizeIndexChanged(val.round());
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: List.generate(9, (index) {
-                            final isMiddle = index == 4;
-                            return Text(
-                              isMiddle ? '|' : '•',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: isMiddle ? FontWeight.bold : FontWeight.normal,
-                                color: primaryColor.withValues(alpha: 0.6),
-                              ),
-                            );
-                          }),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Center(
-                        child: Text(
-                          l.defaultLabel,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: primaryColor.withValues(alpha: 0.6),
-                            fontWeight: FontWeight.bold,
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.format_size_outlined,
+                            size: 18,
+                            color: onSurfaceColor.withValues(alpha: 0.6),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                activeTrackColor: primaryColor,
+                                inactiveTrackColor: primaryColor.withValues(alpha: 0.15),
+                                trackHeight: 6,
+                                thumbColor: primaryColor,
+                                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                                overlayColor: primaryColor.withValues(alpha: 0.12),
+                                overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
+                                valueIndicatorColor: primaryColor,
+                                valueIndicatorTextStyle: TextStyle(
+                                  color: cardColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              child: Slider(
+                                value: _currentFontSizeIndex.toDouble(),
+                                min: 0,
+                                max: 8,
+                                divisions: 8,
+                                label: _currentFontSizeIndex == 4
+                                    ? l.defaultLabel
+                                    : '${_currentFontSizeIndex - 4 > 0 ? "+" : ""}${_currentFontSizeIndex - 4}',
+                                onChanged: (val) {
+                                  HapticFeedback.selectionClick();
+                                  setState(() {
+                                    _currentFontSizeIndex = val.round();
+                                  });
+                                  widget.onFontSizeIndexChanged(val.round());
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _currentFontSizeIndex == 4
+                                ? l.defaultLabel
+                                : '${_currentFontSizeIndex - 4 > 0 ? "+" : ""}${_currentFontSizeIndex - 4}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: onSurfaceColor.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
