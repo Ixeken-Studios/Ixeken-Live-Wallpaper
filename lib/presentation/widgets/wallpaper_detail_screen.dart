@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'customizer_tab.dart';
 import 'live_wallpaper_preview.dart';
-import '../../wallpaper_manager.dart';
 
 class WallpaperDetailScreen extends StatefulWidget {
   final String engineId;

@@ -225,15 +225,15 @@ class SettingsTab extends StatelessWidget {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(11.0),
-                    child: IxekenLogo(
+                    child: GakuuLogo(
                       size: 22,
                       color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
-                title: const Text(
-                  'Ixeken Live Wallpaper',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                title: Text(
+                  L10n.of(context).appTitle,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 subtitle: const Text(
                   'v1.2.0',

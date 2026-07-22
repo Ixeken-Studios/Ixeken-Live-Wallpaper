@@ -1,4 +1,4 @@
-package com.example.ixeken_live_wallpaper
+package com.ixeken.gakuu
 
 import android.content.Context
 import android.content.Intent
@@ -145,7 +145,7 @@ class MainActivity: FlutterActivity() {
                     val dayStartHour = call.argument<Int>("dayStartHour") ?: 6
                     val nightStartHour = call.argument<Int>("nightStartHour") ?: 18
                     val isDimEnabled = call.argument<Boolean>("isDimEnabled") ?: false
-                    val dimIntensity = call.argument<Double>("dimIntensity") ?: 0.43
+                    val dimIntensity = call.argument<Double>("dimIntensity") ?: 0.35
                     val selectedEngine = call.argument<String>("selectedEngine") ?: "carousel"
                     val isRandom = call.argument<Boolean>("isRandom") ?: false
                     val tetrisStyle = call.argument<String>("tetrisStyle") ?: "neon"

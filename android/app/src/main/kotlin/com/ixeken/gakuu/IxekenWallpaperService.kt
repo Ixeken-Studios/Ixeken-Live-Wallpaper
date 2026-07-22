@@ -1,4 +1,4 @@
-package com.example.ixeken_live_wallpaper
+package com.ixeken.gakuu
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -8,7 +8,7 @@ import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
-import com.example.ixeken_live_wallpaper.engines.*
+import com.ixeken.gakuu.engines.*
 
 class IxekenWallpaperService : WallpaperService() {
 

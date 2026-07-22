@@ -32,7 +32,7 @@ class ErrorResult extends UpdateResult {
 
 class GitHubUpdateService {
   static const String repositoryOwner = 'Ixeken-Studios';
-  static const String repositoryName = 'Ixeken-Live-Wallpaper';
+  static const String repositoryName = 'gakuu-app';
   static const String currentAppVersion = '1.2.0';
 
   static int compareVersions(String current, String latest) {

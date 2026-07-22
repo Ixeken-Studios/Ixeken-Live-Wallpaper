@@ -1,8 +1,6 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../l10n.dart';
 import 'live_wallpaper_preview.dart';
-import 'wallpaper_detail_screen.dart';
 
 class GalleryTab extends StatelessWidget {
   final String searchQuery;

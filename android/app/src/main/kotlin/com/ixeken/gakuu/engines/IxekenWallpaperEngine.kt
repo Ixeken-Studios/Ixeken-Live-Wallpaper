@@ -1,4 +1,4 @@
-package com.example.ixeken_live_wallpaper.engines
+package com.ixeken.gakuu.engines
 
 import android.graphics.Canvas
 import android.view.SurfaceHolder

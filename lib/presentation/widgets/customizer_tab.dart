@@ -159,64 +159,67 @@ class _CustomizerTabState extends State<CustomizerTab> {
             ),
           );
         },
-        pageBuilder: (context, animation, secondaryAnimation) => GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Scaffold(
-            backgroundColor: Colors.black,
-            body: Stack(
-              children: [
-                Positioned.fill(
-                  child: LiveWallpaperPreview(
-                    engineId: widget.selectedEngine,
-                    isDimEnabled: widget.isDimEnabled,
-                    dimIntensity: widget.dimIntensity,
-                    tetrisStyle: widget.tetrisStyle,
-                    playlist: _currentSubPlaylist,
-                    isAnimActive: true,
-                    patternLayoutSize: widget.patternLayoutSize,
-                    patternSlotIcons: widget.patternSlotIcons,
-                    patternSpeed: widget.patternSpeed,
-                    patternDensity: widget.patternDensity,
-                    patternRotate: widget.patternRotate,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          final l = L10n.of(context);
+          return GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Scaffold(
+              backgroundColor: Colors.black,
+              body: Stack(
+                children: [
+                  Positioned.fill(
+                    child: LiveWallpaperPreview(
+                      engineId: widget.selectedEngine,
+                      isDimEnabled: widget.isDimEnabled,
+                      dimIntensity: widget.dimIntensity,
+                      tetrisStyle: widget.tetrisStyle,
+                      playlist: _currentSubPlaylist,
+                      isAnimActive: true,
+                      patternLayoutSize: widget.patternLayoutSize,
+                      patternSlotIcons: widget.patternSlotIcons,
+                      patternSpeed: widget.patternSpeed,
+                      patternDensity: widget.patternDensity,
+                      patternRotate: widget.patternRotate,
+                    ),
                   ),
-                ),
-                Positioned(
-                  top: MediaQuery.of(context).padding.top + 16,
-                  left: 16,
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.chevron_left,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Back',
-                            style: TextStyle(
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 16,
+                    left: 16,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.chevron_left,
                               color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                              size: 18,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Text(
+                              l.back,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -261,13 +264,13 @@ class _CustomizerTabState extends State<CustomizerTab> {
                             width: 1,
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.delete_outline, color: Colors.redAccent, size: 16),
-                            SizedBox(width: 6),
+                            const Icon(Icons.delete_outline, color: Colors.redAccent, size: 16),
+                            const SizedBox(width: 6),
                             Text(
-                              'Clear',
+                              l.btnClear,
                               style: TextStyle(
                                 color: Colors.redAccent,
                                 fontWeight: FontWeight.bold,
@@ -309,7 +312,7 @@ class _CustomizerTabState extends State<CustomizerTab> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'Preview',
+                              l.btnPreview,
                               style: TextStyle(
                                 color: primaryColor,
                                 fontWeight: FontWeight.bold,
@@ -413,7 +416,7 @@ class _CustomizerTabState extends State<CustomizerTab> {
                       size: 18,
                     ),
                     label: Text(
-                      'Apply wallpaper',
+                      l.btnApplyWallpaper,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.bold,
@@ -465,16 +468,16 @@ class _CustomizerTabState extends State<CustomizerTab> {
                   // Switches for Carousel / Modes
                   _buildSwitchCard(
                     context: context,
-                    title: 'Activate dark/light mode',
-                    subtitle: 'Enables dark and light mode photo playlist',
+                    title: l.optSyncTheme,
+                    subtitle: l.optSyncThemeSub,
                     icon: Icons.dark_mode_outlined,
                     value: widget.syncWithSystemTheme,
                     onChanged: widget.onSyncThemeChanged,
                   ),
                   _buildSwitchCard(
                     context: context,
-                    title: 'Day/Night mode',
-                    subtitle: 'Displays images based on scheduled hours',
+                    title: l.optDayNight,
+                    subtitle: l.optDayNightSub,
                     icon: Icons.wb_twilight_outlined,
                     value: widget.useDayNightMode,
                     onChanged: widget.onDayNightModeChanged,
@@ -486,7 +489,7 @@ class _CustomizerTabState extends State<CustomizerTab> {
                         Expanded(
                           child: _buildTimeChip(
                             context,
-                            label: 'Day: ${widget.dayStartHour}:00',
+                            label: '${l.dayLabel}: ${widget.dayStartHour}:00',
                             icon: Icons.wb_sunny_outlined,
                             onPressed: () async {
                               final time = await showTimePicker(
@@ -503,7 +506,7 @@ class _CustomizerTabState extends State<CustomizerTab> {
                         Expanded(
                           child: _buildTimeChip(
                             context,
-                            label: 'Night: ${widget.nightStartHour}:00',
+                            label: '${l.nightLabel}: ${widget.nightStartHour}:00',
                             icon: Icons.nightlight_outlined,
                             onPressed: () async {
                               final time = await showTimePicker(
@@ -839,7 +842,7 @@ class _CustomizerTabState extends State<CustomizerTab> {
                   HapticFeedback.lightImpact();
                   onChanged(val);
                 },
-                activeColor: primaryColor,
+                activeThumbColor: primaryColor,
               ),
             ],
           ),
@@ -1228,25 +1231,7 @@ class _CustomizerTabState extends State<CustomizerTab> {
     );
   }
 
-  Widget _buildStyleChip(BuildContext context, String label, String value) {
-    final isSelected = widget.tetrisStyle == value;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      selectedColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-      labelStyle: TextStyle(
-        color: isSelected
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.onSurface,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-      ),
-      onSelected: (val) {
-        if (val) {
-          widget.onTetrisStyleChanged(value);
-        }
-      },
-    );
-  }
+
 
   Widget _buildFpsControl(BuildContext context) {
     final l = L10n.of(context);

@@ -198,13 +198,13 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
         Row(
           children: [
             _buildGridButton(
-              label: 'Space Grotesk',
-              isSelected: _currentFont == 'space_grotesk',
+              label: 'Geomini',
+              isSelected: _currentFont == 'geomini',
               onTap: () {
                 setState(() {
-                  _currentFont = 'space_grotesk';
+                  _currentFont = 'geomini';
                 });
-                widget.onFontChanged('space_grotesk');
+                widget.onFontChanged('geomini');
               },
             ),
             const SizedBox(width: 8),

@@ -400,7 +400,11 @@ class _AppInfoScreenState extends State<AppInfoScreen> {
       showDragHandle: true,
       enableDrag: true,
       isScrollControlled: true,
-      constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
+      useSafeArea: true,
+      constraints: BoxConstraints(
+        maxWidth: 600,
+        maxHeight: MediaQuery.of(context).size.height * 0.5,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
@@ -574,7 +578,7 @@ class _AppInfoScreenState extends State<AppInfoScreen> {
                     title: Text(l.viewRepo, style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text(l.viewRepoSub, style: const TextStyle(fontSize: 12)),
                     trailing: Icon(Icons.chevron_right, color: onSurfaceColor.withValues(alpha: 0.5)),
-                    onTap: () => WallpaperManager.launchUrl('https://github.com/Ixeken-Studios/Ixeken-Live-Wallpaper'),
+                    onTap: () => WallpaperManager.launchUrl('https://github.com/Ixeken-Studios/gakuu-app'),
                   ),
                   Divider(height: 1, color: onSurfaceColor.withValues(alpha: 0.08)),
                   ListTile(
@@ -622,7 +626,7 @@ class _AppInfoScreenState extends State<AppInfoScreen> {
                     trailing: Switch(
                       value: _checkUpdateOnStart,
                       onChanged: _toggleCheckUpdate,
-                      activeColor: primaryColor,
+                      activeThumbColor: primaryColor,
                     ),
                   ),
                   Divider(height: 1, color: onSurfaceColor.withValues(alpha: 0.08)),

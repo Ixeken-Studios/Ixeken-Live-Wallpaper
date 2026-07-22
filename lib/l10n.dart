@@ -11,7 +11,7 @@ class L10n {
 
   static const _localizedValues = {
     'es': {
-      'app_title': 'Ixeken Live Wallpaper',
+      'app_title': 'Gakuu',
       'tab_adjust': 'Ajustar',
       'tab_library': 'Biblioteca',
       'tab_options': 'Ajustes',
@@ -127,8 +127,8 @@ class L10n {
       'check_update_start': 'Buscar actualización al iniciar',
       'check_update_start_sub':
           'Revisar silenciosamente si hay actualizaciones cada vez que abres la app',
-      'created_by': 'Diseñado con dedicación por Ixeken Studios',
-      'made_in_mexico': 'Hecho con ❤️ en México',
+      'created_by': 'Diseñado por Ixeken Studios',
+      'made_in_mexico': 'Hecho en México',
       'internet_confirm_title': '¿Conectar a Internet?',
       'internet_confirm_desc':
           'Nos conectaremos a GitHub Releases para revisar si hay una nueva versión disponible para ti. ¿Quieres continuar?',
@@ -177,7 +177,9 @@ class L10n {
       'cl_performance_title': 'Optimización y Ahorro de Energía',
       'cl_performance_desc':
           'Modo de 30 FPS y reducción automática de consumo con el ahorro de batería de Android.',
-      'btn_apply_wallpaper': 'Aplicar fondo de pantalla',
+      'btn_apply_wallpaper': 'Aplicar fondo',
+      'btn_clear': 'Limpiar',
+      'btn_preview': 'Vista previa',
 
       // Engine Names
       'engine_particles': 'Partículas Flotantes',
@@ -229,7 +231,7 @@ class L10n {
           'Burbujas holográficas líquidas de colores que siguen tus toques en pantalla.',
     },
     'en': {
-      'app_title': 'Ixeken Live Wallpaper',
+      'app_title': 'Gakuu',
       'tab_adjust': 'Adjust',
       'tab_library': 'Library',
       'tab_options': 'Settings',
@@ -391,6 +393,8 @@ class L10n {
       'cl_performance_desc':
           '30 FPS limit toggle and smart battery saver integration to preserve power.',
       'btn_apply_wallpaper': 'Apply wallpaper',
+      'btn_clear': 'Clear',
+      'btn_preview': 'Preview',
 
       // Engine Names
       'engine_particles': 'Floating Particles',
@@ -587,6 +591,8 @@ class L10n {
   String get tabSubGallery => get('tab_sub_gallery');
   String get tabSubOptions => get('tab_sub_options');
   String get btnApplyWallpaper => get('btn_apply_wallpaper');
+  String get btnClear => get('btn_clear');
+  String get btnPreview => get('btn_preview');
 
   // Changelog Highlights v1.2.0
   String get releaseHighlights => get('release_highlights');

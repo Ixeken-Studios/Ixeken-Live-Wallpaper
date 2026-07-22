@@ -2,15 +2,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:ixeken_live_wallpaper/features/wallpaper/domain/entities/current_state.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/domain/entities/local_wallpaper.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/domain/entities/wallpaper_config.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/domain/strategies/sequential_strategy.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/domain/strategies/shuffle_strategy.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/data/models/local_wallpaper_model.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/data/models/wallpaper_config_model.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/data/repositories/wallpaper_repository_impl.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/services/background/background_wallpaper_service.dart';
+import 'package:gakuu/features/wallpaper/domain/entities/current_state.dart';
+import 'package:gakuu/features/wallpaper/domain/entities/local_wallpaper.dart';
+import 'package:gakuu/features/wallpaper/domain/entities/wallpaper_config.dart';
+import 'package:gakuu/features/wallpaper/domain/strategies/sequential_strategy.dart';
+import 'package:gakuu/features/wallpaper/domain/strategies/shuffle_strategy.dart';
+import 'package:gakuu/features/wallpaper/data/models/local_wallpaper_model.dart';
+import 'package:gakuu/features/wallpaper/data/models/wallpaper_config_model.dart';
+import 'package:gakuu/features/wallpaper/data/repositories/wallpaper_repository_impl.dart';
+import 'package:gakuu/features/wallpaper/services/background/background_wallpaper_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ixeken_live_wallpaper/services/github_update_service.dart';
+import 'package:gakuu/services/github_update_service.dart';
 
 void main() {
   group('GitHubUpdateService Version Comparison Tests', () {

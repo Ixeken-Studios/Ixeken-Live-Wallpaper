@@ -2,4 +2,4 @@
 <wallpaper xmlns:android="http://schemas.android.com/apk/res/android"
     android:thumbnail="@drawable/wallpaper_thumbnail"
     android:description="@string/app_name"
-    android:settingsActivity="com.example.ixeken_live_wallpaper.MainActivity" />
+    android:settingsActivity="com.ixeken.gakuu.MainActivity" />

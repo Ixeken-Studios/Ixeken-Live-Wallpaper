@@ -5,7 +5,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:dynamic_color/dynamic_color.dart';
 import 'wallpaper_manager.dart';
 import 'l10n.dart';
 import 'presentation/widgets/customizer_tab.dart';
@@ -18,29 +17,13 @@ import 'services/github_update_service.dart';
 import 'dart:io';
 
 // Paletas de Diseño
-final ValueNotifier<String> themeStyleNotifier = ValueNotifier('ixeken_dark');
-final ValueNotifier<String> fontFamilyNotifier = ValueNotifier('system');
+final ValueNotifier<String> themeStyleNotifier = ValueNotifier('ixeken_light');
+final ValueNotifier<String> fontFamilyNotifier = ValueNotifier('gs_flex');
 final ValueNotifier<int> fontSizeIndexNotifier = ValueNotifier(4);
 
-TextTheme _ensureFontSizes(TextTheme theme) {
-  return theme.copyWith(
-    displayLarge: (theme.displayLarge ?? const TextStyle()).copyWith(fontSize: theme.displayLarge?.fontSize ?? 57.0),
-    displayMedium: (theme.displayMedium ?? const TextStyle()).copyWith(fontSize: theme.displayMedium?.fontSize ?? 45.0),
-    displaySmall: (theme.displaySmall ?? const TextStyle()).copyWith(fontSize: theme.displaySmall?.fontSize ?? 36.0),
-    headlineLarge: (theme.headlineLarge ?? const TextStyle()).copyWith(fontSize: theme.headlineLarge?.fontSize ?? 32.0),
-    headlineMedium: (theme.headlineMedium ?? const TextStyle()).copyWith(fontSize: theme.headlineMedium?.fontSize ?? 28.0),
-    headlineSmall: (theme.headlineSmall ?? const TextStyle()).copyWith(fontSize: theme.headlineSmall?.fontSize ?? 24.0),
-    titleLarge: (theme.titleLarge ?? const TextStyle()).copyWith(fontSize: theme.titleLarge?.fontSize ?? 22.0),
-    titleMedium: (theme.titleMedium ?? const TextStyle()).copyWith(fontSize: theme.titleMedium?.fontSize ?? 16.0),
-    titleSmall: (theme.titleSmall ?? const TextStyle()).copyWith(fontSize: theme.titleSmall?.fontSize ?? 14.0),
-    bodyLarge: (theme.bodyLarge ?? const TextStyle()).copyWith(fontSize: theme.bodyLarge?.fontSize ?? 16.0),
-    bodyMedium: (theme.bodyMedium ?? const TextStyle()).copyWith(fontSize: theme.bodyMedium?.fontSize ?? 14.0),
-    bodySmall: (theme.bodySmall ?? const TextStyle()).copyWith(fontSize: theme.bodySmall?.fontSize ?? 12.0),
-    labelLarge: (theme.labelLarge ?? const TextStyle()).copyWith(fontSize: theme.labelLarge?.fontSize ?? 14.0),
-    labelMedium: (theme.labelMedium ?? const TextStyle()).copyWith(fontSize: theme.labelMedium?.fontSize ?? 12.0),
-    labelSmall: (theme.labelSmall ?? const TextStyle()).copyWith(fontSize: theme.labelSmall?.fontSize ?? 11.0),
-  );
-}
+
+
+
 
 ThemeData buildThemeData(String themeStyle, String fontFamily, int fontSizeIndex) {
   Color primary;
@@ -93,8 +76,8 @@ ThemeData buildThemeData(String themeStyle, String fontFamily, int fontSizeIndex
     case 'rubik':
       textTheme = GoogleFonts.rubikTextTheme(baseTheme);
       break;
-    case 'space_grotesk':
-      textTheme = GoogleFonts.spaceGroteskTextTheme(baseTheme);
+    case 'geomini':
+      textTheme = baseTheme.apply(fontFamily: 'Geomini');
       break;
     case 'ubuntu':
       textTheme = GoogleFonts.ubuntuTextTheme(baseTheme);
@@ -120,33 +103,7 @@ ThemeData buildThemeData(String themeStyle, String fontFamily, int fontSizeIndex
       break;
   }
 
-  String? resolvedFontFamily;
-  switch (fontFamily) {
-    case 'inter':
-      resolvedFontFamily = GoogleFonts.inter().fontFamily;
-      break;
-    case 'rubik':
-      resolvedFontFamily = GoogleFonts.rubik().fontFamily;
-      break;
-    case 'space_grotesk':
-      resolvedFontFamily = GoogleFonts.spaceGrotesk().fontFamily;
-      break;
-    case 'ubuntu':
-      resolvedFontFamily = GoogleFonts.ubuntu().fontFamily;
-      break;
-    case 'gs_sans_flex':
-    case 'gs_flex':
-      resolvedFontFamily = GoogleFonts.outfit().fontFamily;
-      break;
-    case 'system':
-    default:
-      resolvedFontFamily = null;
-      break;
-  }
-
-  final double fontSizeFactor = 0.8 + (fontSizeIndex * 0.05);
-  textTheme = _ensureFontSizes(textTheme).apply(
-    fontSizeFactor: fontSizeFactor,
+  textTheme = textTheme.apply(
     bodyColor: isLightTheme ? Colors.black87 : Colors.white,
     displayColor: isLightTheme ? Colors.black87 : Colors.white,
   );
@@ -169,7 +126,6 @@ ThemeData buildThemeData(String themeStyle, String fontFamily, int fontSizeIndex
     colorScheme: colorScheme,
     cardColor: secondary,
     dividerColor: isLightTheme ? Colors.black12 : Colors.white12,
-    fontFamily: resolvedFontFamily,
     textTheme: textTheme,
     appBarTheme: AppBarTheme(
       backgroundColor: background,
@@ -297,10 +253,10 @@ class _HomePageState extends State<HomePage> {
   bool _isParallaxEnabled = false;
   int _currentTab = 0;
   String _searchQuery = '';
-  double _dimIntensity = 0.43;
+  double _dimIntensity = 0.35;
   String _carouselChangeMode = 'on_visibility';
   int _carouselChangeInterval = 60;
-  String _appThemeMode = 'system';
+  String _appThemeMode = 'ixeken_light';
   bool _isHalfFpsEnabled = false;
   bool _isSearchActive = false;
   final TextEditingController _searchController = TextEditingController();
@@ -376,7 +332,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadPersistedData() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedMode = prefs.getString('app_theme_mode') ?? 'ixeken_dark';
+    final savedMode = prefs.getString('app_theme_mode') ?? 'ixeken_light';
     final savedFontSizeIndex = prefs.getInt('app_font_size_index') ?? 4;
     setState(() {
       _playlistGeneral = prefs.getStringList('playlist_general') ?? [];
@@ -392,12 +348,12 @@ class _HomePageState extends State<HomePage> {
       _selectedEngineLock = prefs.getString('selected_engine_lock') ?? 'same';
       _syncWithSystemTheme = prefs.getBool('sync_with_system_theme') ?? false;
       _isParallaxEnabled = prefs.getBool('is_parallax') ?? false;
-      _dimIntensity = prefs.getDouble('dim_intensity') ?? 0.43;
+      _dimIntensity = prefs.getDouble('dim_intensity') ?? 0.35;
       _carouselChangeMode = prefs.getString('carousel_change_mode') ?? 'on_visibility';
       _carouselChangeInterval = prefs.getInt('carousel_change_interval') ?? 60;
       _appThemeMode = savedMode;
       _isHalfFpsEnabled = prefs.getBool('is_half_fps') ?? false;
-      fontFamilyNotifier.value = prefs.getString('app_font_family') ?? 'system';
+      fontFamilyNotifier.value = prefs.getString('app_font_family') ?? 'gs_flex';
       themeStyleNotifier.value = savedMode;
       fontSizeIndexNotifier.value = savedFontSizeIndex;
 
@@ -712,7 +668,7 @@ class _HomePageState extends State<HomePage> {
                           });
                           await _savePersistedData();
                           await _applySettings();
-                          if (mounted && Navigator.canPop(context)) {
+                          if (context.mounted && Navigator.canPop(context)) {
                             Navigator.pop(context);
                           }
                         },
@@ -1135,9 +1091,13 @@ class _HomePageState extends State<HomePage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       showDragHandle: true,
       enableDrag: true,
-      constraints: const BoxConstraints(maxWidth: 600),
+      constraints: BoxConstraints(
+        maxWidth: 600,
+        maxHeight: MediaQuery.of(context).size.height * 0.82,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Logo original de Ixeken Studios (para "Made by Ixeken")
 class IxekenLogo extends StatelessWidget {
   final double size;
   final Color? color;
@@ -18,6 +19,30 @@ class IxekenLogo extends StatelessWidget {
       height: size * (108.0 / 98.0),
       child: CustomPaint(
         painter: _IxekenLogoPainter(effectiveColor),
+      ),
+    );
+  }
+}
+
+/// Nuevo Logo de la aplicación Gakuu
+class GakuuLogo extends StatelessWidget {
+  final double size;
+  final Color? color;
+
+  const GakuuLogo({
+    super.key,
+    this.size = 24.0,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveColor = color ?? Theme.of(context).colorScheme.primary;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        painter: _GakuuLogoPainter(effectiveColor),
       ),
     );
   }
@@ -180,6 +205,140 @@ class _IxekenLogoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _IxekenLogoPainter oldDelegate) {
+    return oldDelegate.color != color;
+  }
+}
+
+class _GakuuLogoPainter extends CustomPainter {
+  final Color color;
+
+  _GakuuLogoPainter(this.color);
+
+  static final List<({String d, bool isEvenOdd, bool isCutout})> _pathDatas = [
+    (d: "M0,0h192v192h-192zM13.9,13.9h164.2v164.2h-164.2z", isEvenOdd: true, isCutout: false),
+    (d: "M21,21h150v150h-150zM34.9,34.9h122.2v122.2h-122.2z", isEvenOdd: true, isCutout: false),
+    (d: "M21,21h75v150h-75z", isEvenOdd: false, isCutout: false),
+    (d: "M96,33h63v126h-63z", isEvenOdd: false, isCutout: false),
+    (d: "M33,33h63v63h-63z", isEvenOdd: false, isCutout: true),
+    (d: "M96,96h63v63h-63z", isEvenOdd: false, isCutout: true),
+  ];
+
+  static final List<({Path path, bool isCutout})> _cachedPaths = _pathDatas.map((item) {
+    return (path: _parseSvgPath(item.d, isEvenOdd: item.isEvenOdd), isCutout: item.isCutout);
+  }).toList();
+
+  static Path _parseSvgPath(String d, {required bool isEvenOdd}) {
+    final path = Path();
+    if (isEvenOdd) {
+      path.fillType = PathFillType.evenOdd;
+    }
+    final regExp = RegExp(r'([a-zA-Z])|([-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?)');
+    final matches = regExp.allMatches(d).toList();
+
+    String? cmd;
+    int i = 0;
+
+    double getNum() {
+      if (i < matches.length && matches[i].group(1) == null) {
+        final val = double.parse(matches[i].group(0)!);
+        i++;
+        return val;
+      }
+      return 0.0;
+    }
+
+    double currentX = 0;
+    double currentY = 0;
+
+    while (i < matches.length) {
+      final m = matches[i];
+      final matchStr = m.group(0)!;
+      if (m.group(1) != null) {
+        cmd = matchStr;
+        i++;
+      }
+
+      if (cmd == 'M' || cmd == 'm') {
+        final x = getNum();
+        final y = getNum();
+        if (cmd == 'm') {
+          currentX += x;
+          currentY += y;
+          path.relativeMoveTo(x, y);
+        } else {
+          currentX = x;
+          currentY = y;
+          path.moveTo(x, y);
+        }
+      } else if (cmd == 'H' || cmd == 'h') {
+        final x = getNum();
+        if (cmd == 'h') {
+          currentX += x;
+          path.relativeLineTo(x, 0);
+        } else {
+          currentX = x;
+          path.lineTo(x, currentY);
+        }
+      } else if (cmd == 'V' || cmd == 'v') {
+        final y = getNum();
+        if (cmd == 'v') {
+          currentY += y;
+          path.relativeLineTo(0, y);
+        } else {
+          currentY = y;
+          path.lineTo(currentX, y);
+        }
+      } else if (cmd == 'L' || cmd == 'l') {
+        final x = getNum();
+        final y = getNum();
+        if (cmd == 'l') {
+          currentX += x;
+          currentY += y;
+          path.relativeLineTo(x, y);
+        } else {
+          currentX = x;
+          currentY = y;
+          path.lineTo(x, y);
+        }
+      } else if (cmd == 'Z' || cmd == 'z') {
+        path.close();
+      } else {
+        i++;
+      }
+    }
+    return path;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = size.width / 192.0;
+    canvas.save();
+    canvas.scale(scale, scale);
+
+    final paintMain = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final paintCutout = Paint()
+      ..color = Colors.transparent
+      ..blendMode = BlendMode.clear;
+
+    canvas.saveLayer(Rect.fromLTWH(0, 0, 192, 192), Paint());
+
+    for (final item in _cachedPaths) {
+      if (!item.isCutout) {
+        canvas.drawPath(item.path, paintMain);
+      } else {
+        canvas.drawPath(item.path, paintCutout);
+      }
+    }
+
+    canvas.restore();
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _GakuuLogoPainter oldDelegate) {
     return oldDelegate.color != color;
   }
 }

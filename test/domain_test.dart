@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/domain/entities/current_state.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/domain/entities/local_wallpaper.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/domain/entities/wallpaper_config.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/domain/strategies/sequential_strategy.dart';
-import 'package:ixeken_live_wallpaper/features/wallpaper/domain/strategies/shuffle_strategy.dart';
+import 'package:gakuu/features/wallpaper/domain/entities/current_state.dart';
+import 'package:gakuu/features/wallpaper/domain/entities/local_wallpaper.dart';
+import 'package:gakuu/features/wallpaper/domain/entities/wallpaper_config.dart';
+import 'package:gakuu/features/wallpaper/domain/strategies/sequential_strategy.dart';
+import 'package:gakuu/features/wallpaper/domain/strategies/shuffle_strategy.dart';
 
 void main() {
   group('SequentialStrategy Tests', () {
